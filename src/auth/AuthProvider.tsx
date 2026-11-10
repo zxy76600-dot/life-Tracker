@@ -84,6 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error: authError } = await requireSupabase().auth.signInWithPassword({ email, password });
       if (authError) { setError(authError.message); throw authError; }
     },
+    signInWithGoogle: async () => {
+      setError('');
+      const { error: authError } = await requireSupabase().auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/` },
+      });
+      if (authError) { setError(authError.message); throw authError; }
+    },
     signUp: async (email, password) => {
       setError('');
       const { data, error: authError } = await requireSupabase().auth.signUp({ email, password });

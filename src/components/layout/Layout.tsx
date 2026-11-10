@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { MobileTabBar } from './MobileTabBar';
@@ -31,6 +31,11 @@ export function Layout() {
         <main className="p-4 pb-24 lg:p-6 lg:pb-6">
           <Outlet />
         </main>
+        <footer className="px-4 pb-24 text-center text-xs text-neutral-400 dark:text-neutral-500 lg:px-6 lg:pb-6">
+          <Link className="hover:text-neutral-900 dark:hover:text-white" to="/privacy">Privacy</Link>
+          <span className="mx-2">·</span>
+          <Link className="hover:text-neutral-900 dark:hover:text-white" to="/terms">Terms</Link>
+        </footer>
       </div>
 
       {/* Mobile bottom tab bar */}

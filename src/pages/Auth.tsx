@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import { Button, Card, Input } from '../components/ui';
@@ -6,14 +6,41 @@ import { useAuth } from '../auth/authContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 export default function Auth() {
-  const { user, loading, error, signIn, signUp, clearError } = useAuth();
+  const { user, loading, error, signIn, signInWithGoogle, signUp, clearError } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [message, setMessage] = useState('');
   const location = useLocation();
   const returnTo = (location.state as { from?: string } | null)?.from ?? '/';
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const errorKeys = ['error', 'error_code', 'error_description'];
+    const searchParams = new URLSearchParams(url.search);
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const queryError = errorKeys.some((key) => searchParams.has(key));
+    const hashError = errorKeys.some((key) => hashParams.has(key));
+    if (!queryError && !hashError) return;
+
+    const providerError = searchParams.get('error') ?? hashParams.get('error') ?? '';
+    const description = searchParams.get('error_description') ?? hashParams.get('error_description') ?? '';
+    const cancelled = /cancel|denied|access_denied/i.test(`${providerError} ${description}`);
+    setMessage(cancelled
+      ? 'Google sign-in was cancelled. You can try again whenever you’re ready.'
+      : 'Google sign-in couldn’t be completed. Please try again.');
+
+    for (const key of errorKeys) {
+      searchParams.delete(key);
+      hashParams.delete(key);
+    }
+    url.search = searchParams.toString();
+    const remainingHash = hashParams.toString();
+    url.hash = remainingHash ? `#${remainingHash}` : '';
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-neutral-50 text-sm text-neutral-500 dark:bg-black dark:text-neutral-400">Loading…</div>;
   if (user) return <Navigate to={returnTo} replace />;
@@ -30,6 +57,16 @@ export default function Auth() {
       }
     } catch { /* Error is displayed from the auth provider. */ }
     finally { setBusy(false); }
+  };
+
+  const continueWithGoogle = async () => {
+    setGoogleBusy(true); setMessage(''); clearError();
+    try {
+      await signInWithGoogle();
+    } catch {
+      setMessage('Google sign-in couldn’t be started. Please try again.');
+      setGoogleBusy(false);
+    }
   };
 
   return (
@@ -50,10 +87,16 @@ export default function Auth() {
               <form onSubmit={submit} className="space-y-4">
                 <Input label="Email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
                 <Input label="Password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} />
-                {(error || message) && <p role="status" className={`text-sm ${error ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{error || message}</p>}
                 <Button type="submit" disabled={busy} className="w-full">{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</Button>
               </form>
-              <p className="mt-4 text-center text-xs text-neutral-500">Your tracker data is private to your account.</p>
+              <div className="my-4 flex items-center gap-3 text-xs text-neutral-400"><span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" /><span>or</span><span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" /></div>
+              <Button type="button" variant="secondary" disabled={busy || googleBusy} onClick={() => void continueWithGoogle()} className="w-full">
+                {googleBusy ? 'Redirecting to Google…' : 'Continue with Google'}
+              </Button>
+              {(error || message) && <p role="status" className={`mt-4 text-sm ${error ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{message || error}</p>}
+              <p className="mt-4 text-center text-xs text-neutral-500 dark:text-neutral-400">
+                By continuing, you agree to our <Link className="underline underline-offset-2 hover:text-neutral-900 dark:hover:text-white" to="/terms">Terms</Link> and <Link className="underline underline-offset-2 hover:text-neutral-900 dark:hover:text-white" to="/privacy">Privacy Policy</Link>.
+              </p>
             </>
           )}
         </Card>

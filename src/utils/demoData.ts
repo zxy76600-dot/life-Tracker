@@ -1,7 +1,8 @@
 import { format, subDays } from 'date-fns';
 import type { Habit, Goal, MoodEntry, Workout, DailyHealth, Transaction } from '../types';
+import { importLegacyBackup } from '../lib/cloudData';
 
-export function loadDemoData() {
+export async function loadDemoData() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const d1 = format(subDays(new Date(), 1), 'yyyy-MM-dd');
   const d2 = format(subDays(new Date(), 2), 'yyyy-MM-dd');
@@ -127,9 +128,11 @@ export function loadDemoData() {
     { id: 'demo-t7', type: 'expense', amount: 35, category: 'Healthcare', description: 'Vitamins & Supplements', date: d5 },
   ];
 
-  localStorage.setItem('life-tracker-habits', JSON.stringify({ state: { habits }, version: 0 }));
-  localStorage.setItem('life-tracker-goals', JSON.stringify({ state: { goals }, version: 0 }));
-  localStorage.setItem('life-tracker-mood', JSON.stringify({ state: { entries: moodEntries }, version: 0 }));
-  localStorage.setItem('life-tracker-fitness', JSON.stringify({ state: { workouts, dailyHealth }, version: 0 }));
-  localStorage.setItem('life-tracker-finances', JSON.stringify({ state: { transactions }, version: 0 }));
+  await importLegacyBackup({
+    'life-tracker-habits': JSON.stringify({ state: { habits }, version: 0 }),
+    'life-tracker-goals': JSON.stringify({ state: { goals }, version: 0 }),
+    'life-tracker-mood': JSON.stringify({ state: { entries: moodEntries }, version: 0 }),
+    'life-tracker-fitness': JSON.stringify({ state: { workouts, dailyHealth }, version: 0 }),
+    'life-tracker-finances': JSON.stringify({ state: { transactions }, version: 0 }),
+  });
 }

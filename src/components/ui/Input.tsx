@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, forwardRef } from 'react';
+import { type InputHTMLAttributes, forwardRef, useId } from 'react';
 
 /**
  * Input — Styled text input field for forms with white and black theme support.
@@ -9,29 +9,32 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = '', ...props }, ref) => {
+  ({ label, error, className = '', id, 'aria-describedby': ariaDescribedBy, ...props }, ref) => {
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
     return (
       <div className="space-y-1.5">
         {label && (
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <label htmlFor={inputId} className="block text-sm font-semibold text-app-ink">
             {label}
           </label>
         )}
         <input
           ref={ref}
+          id={inputId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? [ariaDescribedBy, `${inputId}-error`].filter(Boolean).join(' ') : ariaDescribedBy}
           className={`
-            w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 shadow-sm
-            text-neutral-900 placeholder:text-neutral-400
-            dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500
-            transition-colors duration-200
-            focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20
-            ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}
+            min-h-11 w-full rounded-card border border-app-border bg-app-card px-4 py-2.5
+            text-app-ink placeholder:text-app-subtle shadow-sm transition-colors duration-200 motion-reduce:transition-none
+            focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 focus-visible:ring-2 focus-visible:ring-accent
+            ${error ? 'border-app-ink focus:border-app-ink focus:ring-app-ink/20' : ''}
             ${className}
           `}
           {...props}
         />
         {error && (
-          <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+          <p id={`${inputId}-error`} role="alert" className="text-sm font-medium text-app-ink">{error}</p>
         )}
       </div>
     );

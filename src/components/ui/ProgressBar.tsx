@@ -18,24 +18,24 @@ export function ProgressBar({
   const heightClass = size === 'sm' ? 'h-1.5' : 'h-2.5';
 
   const colorMap: Record<string, string> = {
-    blue: 'bg-blue-500',
-    emerald: 'bg-emerald-500',
-    purple: 'bg-purple-500',
-    amber: 'bg-amber-500',
-    red: 'bg-red-500',
-    cyan: 'bg-cyan-500',
+    blue: 'bg-cat-blue',
+    emerald: 'bg-cat-green',
+    purple: 'bg-cat-indigo',
+    amber: 'bg-cat-amber',
+    red: 'bg-accent',
+    cyan: 'bg-cat-teal',
   };
 
   return (
     <div className="flex items-center gap-3">
-      <div className={`flex-1 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800 ${heightClass}`}>
+      <div role="progressbar" aria-valuenow={Math.round(clampedValue)} aria-valuemin={0} aria-valuemax={100} className={`flex-1 overflow-hidden rounded-full bg-app-muted ${heightClass}`}>
         <div
-          className={`${heightClass} rounded-full transition-all duration-500 ease-out ${colorMap[color] ?? 'bg-blue-500'}`}
+          className={`${heightClass} rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${colorMap[color] ?? 'bg-cat-blue'}`}
           style={{ width: `${clampedValue}%` }}
         />
       </div>
       {showLabel && (
-        <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400 tabular-nums">
+        <span className="text-sm font-semibold text-app-subtle tabular-nums">
           {Math.round(clampedValue)}%
         </span>
       )}

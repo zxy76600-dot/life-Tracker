@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { type ReactNode, useEffect, useId } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 
 /**
@@ -13,6 +13,8 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  const titleId = useId();
+  const shouldReduceMotion = useReducedMotion();
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -35,28 +37,30 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         <>
           {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={shouldReduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+            exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+            className="fixed inset-0 z-40 bg-neutral-950/45 backdrop-blur-sm"
             onClick={onClose}
           />
 
           {/* Modal content */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.98, y: 12 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', damping: 28, stiffness: 320 }}
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
           >
-            <div className="w-full max-w-lg rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+            <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-card-lg border border-app-border bg-app-card shadow-card-hover">
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4 dark:border-neutral-800">
-                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">{title}</h2>
+              <div className="sticky top-0 flex items-center justify-between border-b border-app-border bg-app-card px-5 py-4 sm:px-6">
+                <h2 id={titleId} className="text-lg font-bold tracking-tight text-app-ink">{title}</h2>
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200 cursor-pointer"
+                  className="rounded-xl p-2 text-app-subtle transition-colors motion-reduce:transition-none hover:bg-app-muted hover:text-app-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer"
                   aria-label="Close modal"
                 >
                   <X size={20} />
@@ -64,7 +68,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
               </div>
 
               {/* Body */}
-              <div className="px-6 py-5">
+              <div className="px-5 py-5 sm:px-6">
                 {children}
               </div>
             </div>

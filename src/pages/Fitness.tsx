@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Plus, Trash2, Dumbbell, Droplets, Moon } from 'lucide-react';
 import { Card, Button, Input, Modal, EmptyState, Badge, Select } from '../components/ui';
 import { useFitnessStore } from '../stores/fitnessStore';
@@ -19,6 +19,7 @@ const WORKOUT_TYPES: { value: WorkoutType; label: string }[] = [
 ];
 
 export default function Fitness() {
+  const shouldReduceMotion = useReducedMotion();
   const { workouts, addWorkout, removeWorkout, getTodayHealth, updateDailyHealth } = useFitnessStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [workoutName, setWorkoutName] = useState('');
@@ -47,16 +48,16 @@ export default function Fitness() {
   const sortedWorkouts = [...workouts].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Daily Health Trackers */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Water Intake */}
         <Card>
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-xl bg-cyan-500/10 p-2.5 dark:bg-cyan-500/15">
-              <Droplets size={20} className="text-cyan-500" />
+            <div className="rounded-xl bg-cat-teal/10 p-2.5">
+              <Droplets size={20} className="text-cat-teal" />
             </div>
-            <h3 className="font-semibold text-neutral-900 dark:text-white">Water Intake</h3>
+            <h3 className="font-semibold text-app-ink">Water Intake</h3>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex flex-wrap gap-1.5">
@@ -64,18 +65,19 @@ export default function Fitness() {
                 <button
                   key={i}
                   onClick={() => updateDailyHealth({ waterGlasses: i + 1 })}
-                  className={`h-9 w-9 rounded-xl text-sm transition-all cursor-pointer ${
-                    i < todayHealth.waterGlasses
-                      ? 'bg-cyan-500 text-white shadow-sm shadow-cyan-500/30'
-                      : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-500 dark:hover:bg-neutral-700'
-                  }`}
                   aria-label={`Log ${i + 1} glasses of water`}
+                  aria-pressed={i < todayHealth.waterGlasses}
+                  className={`h-9 w-9 rounded-xl text-sm transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cat-teal focus-visible:ring-offset-2 cursor-pointer ${
+                    i < todayHealth.waterGlasses
+                      ? 'bg-cat-teal text-white shadow-card'
+                      : 'bg-app-muted text-app-subtle hover:bg-cat-teal/10'
+                  }`}
                 >
                   💧
                 </button>
               ))}
             </div>
-            <span className="text-lg font-bold text-cyan-600 dark:text-cyan-400">
+            <span className="text-xl font-bold text-cat-teal-ink tabular-nums">
               {todayHealth.waterGlasses}/8
             </span>
           </div>
@@ -84,10 +86,10 @@ export default function Fitness() {
         {/* Sleep Tracker */}
         <Card>
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-xl bg-indigo-500/10 p-2.5 dark:bg-indigo-500/15">
-              <Moon size={20} className="text-indigo-500" />
+            <div className="rounded-xl bg-cat-indigo/10 p-2.5">
+              <Moon size={20} className="text-cat-indigo" />
             </div>
-            <h3 className="font-semibold text-neutral-900 dark:text-white">Sleep Hours</h3>
+            <h3 className="font-semibold text-app-ink">Sleep Hours</h3>
           </div>
           <div className="flex items-center gap-4">
             <input
@@ -97,13 +99,13 @@ export default function Fitness() {
               step="0.5"
               value={todayHealth.sleepHours}
               onChange={(e) => updateDailyHealth({ sleepHours: Number(e.target.value) })}
-              className="flex-1 accent-indigo-500 cursor-pointer"
+              className="flex-1 accent-cat-indigo cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cat-indigo"
             />
-            <span className="min-w-[4rem] text-lg font-bold text-indigo-600 dark:text-indigo-400">
+            <span className="min-w-[4rem] text-xl font-bold text-cat-indigo tabular-nums">
               {todayHealth.sleepHours}h
             </span>
           </div>
-          <p className="mt-2 text-xs text-neutral-500">
+          <p className="mt-2 text-xs text-app-subtle">
             {todayHealth.sleepHours >= 7 ? '✅ Great sleep!' : todayHealth.sleepHours >= 5 ? '⚠️ Could be better' : '😴 Get more rest!'}
           </p>
         </Card>
@@ -111,7 +113,7 @@ export default function Fitness() {
 
       {/* Workouts Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">Workouts</h3>
+        <h3 className="text-xl font-bold tracking-tight text-app-ink">Workouts</h3>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus size={18} />
           Log Workout
@@ -137,21 +139,21 @@ export default function Fitness() {
             {sortedWorkouts.map((workout) => (
               <motion.div
                 key={workout.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
+                layout={!shouldReduceMotion}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
+                exit={shouldReduceMotion ? undefined : { opacity: 0, x: -40 }}
               >
                 <Card hover>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-neutral-900 dark:text-white">{workout.name}</h4>
+                  <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="break-words font-semibold text-app-ink">{workout.name}</h4>
                         <Badge variant="blue">
                           {WORKOUT_TYPES.find((t) => t.value === workout.type)?.label}
                         </Badge>
                       </div>
-                      <div className="mt-1 flex gap-4 text-sm text-neutral-500 dark:text-neutral-400">
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-app-subtle sm:text-sm">
                         <span>{workout.duration} min</span>
                         {workout.calories > 0 && <span>{workout.calories} cal</span>}
                         <span>{formatDate(workout.date)}</span>

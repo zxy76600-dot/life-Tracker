@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Card, Button, EmptyState } from '../components/ui';
 import { useMoodStore } from '../stores/moodStore';
-import { useThemeStore } from '../stores/themeStore';
 import { MOOD_EMOJIS, MOOD_LABELS, type MoodLevel } from '../types';
 import { formatDate } from '../utils/helpers';
 import { Smile, Trash2 } from 'lucide-react';
@@ -16,10 +15,8 @@ import { format, subDays, parseISO } from 'date-fns';
  * Features true black and white theme support.
  */
 export default function MoodJournal() {
+  const shouldReduceMotion = useReducedMotion();
   const { entries, addEntry, removeEntry, getTodayEntry } = useMoodStore();
-  const { theme } = useThemeStore();
-  const isDark = theme === 'dark';
-
   const [selectedMood, setSelectedMood] = useState<MoodLevel | null>(null);
   const [note, setNote] = useState('');
 
@@ -46,40 +43,42 @@ export default function MoodJournal() {
   const sortedEntries = [...entries].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Log Today's Mood */}
       <Card>
-        <h3 className="mb-4 text-lg font-semibold text-neutral-900 dark:text-white">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cat-teal">Daily check-in</p>
+        <h3 className="mb-5 mt-1 text-xl font-bold tracking-tight text-app-ink sm:text-2xl">
           {todayEntry ? "Update Today's Mood" : "How are you feeling today?"}
         </h3>
 
-        <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+        <div role="group" aria-label="Choose today's mood" className="flex flex-wrap justify-center gap-2 sm:gap-4">
           {([1, 2, 3, 4, 5] as MoodLevel[]).map((level) => (
             <button
               key={level}
               onClick={() => setSelectedMood(level)}
-              className={`flex flex-col items-center gap-1.5 rounded-2xl p-3.5 transition-all cursor-pointer ${
+              aria-pressed={selectedMood === level}
+              className={`flex min-w-[58px] flex-col items-center gap-1.5 rounded-2xl p-3 transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer ${
                 selectedMood === level
-                  ? 'scale-110 bg-neutral-100 ring-2 ring-neutral-900 shadow-sm dark:bg-neutral-800 dark:ring-white'
-                  : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                  ? 'bg-accent-soft ring-2 ring-accent shadow-card dark:bg-accent/15'
+                  : 'hover:bg-app-muted'
               } ${
-                todayEntry?.mood === level && selectedMood === null ? 'bg-neutral-100 ring-1 ring-neutral-300 dark:bg-neutral-800/60 dark:ring-neutral-700' : ''
+                todayEntry?.mood === level && selectedMood === null ? 'bg-cat-teal/10 ring-1 ring-cat-teal/40 dark:bg-cat-teal/10' : ''
               }`}
             >
               <span className="text-3xl">{MOOD_EMOJIS[level]}</span>
-              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{MOOD_LABELS[level]}</span>
+              <span className="text-xs font-medium text-app-subtle">{MOOD_LABELS[level]}</span>
             </button>
           ))}
         </div>
 
         {selectedMood && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
+            initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
+            animate={shouldReduceMotion ? undefined : { opacity: 1, height: 'auto' }}
             className="mt-5 space-y-3"
           >
             <textarea
-              className="w-full rounded-2xl border border-neutral-300 bg-white px-4 py-2.5 shadow-sm text-neutral-900 placeholder:text-neutral-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+              className="w-full rounded-card border border-app-border bg-app-card px-4 py-3 text-app-ink shadow-sm placeholder:text-app-subtle focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               rows={3}
               placeholder="What's on your mind? (optional)"
               value={note}
@@ -98,33 +97,33 @@ export default function MoodJournal() {
       {/* Mood Trend Chart */}
       {entries.length > 0 && (
         <Card>
-          <h3 className="mb-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+          <h3 className="mb-4 text-sm font-semibold text-app-ink">
             Mood Trend (Last 30 Days)
           </h3>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="moodGradient30" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--color-cat-teal)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="var(--color-cat-teal)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#262626' : '#e5e5e5'} />
-              <XAxis dataKey="date" stroke={isDark ? '#737373' : '#a3a3a3'} fontSize={11} interval="preserveStartEnd" />
-              <YAxis domain={[1, 5]} stroke={isDark ? '#737373' : '#a3a3a3'} fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-app-border)" />
+              <XAxis dataKey="date" stroke="var(--color-app-subtle)" fontSize={11} interval="preserveStartEnd" />
+              <YAxis domain={[1, 5]} stroke="var(--color-app-subtle)" fontSize={12} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: isDark ? '#171717' : '#ffffff',
-                  border: `1px solid ${isDark ? '#262626' : '#e5e5e5'}`,
-                  borderRadius: '10px',
-                  color: isDark ? '#ffffff' : '#0a0a0a',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  backgroundColor: 'var(--app-card)',
+                  border: '1px solid var(--app-border)',
+                  borderRadius: 'var(--radius-card)',
+                  color: 'var(--app-ink)',
+                  boxShadow: 'var(--shadow-card)',
                 }}
               />
               <Area
                 type="monotone"
                 dataKey="mood"
-                stroke="#8b5cf6"
+                stroke="var(--color-cat-teal)"
                 fill="url(#moodGradient30)"
                 strokeWidth={2}
                 connectNulls
@@ -136,7 +135,7 @@ export default function MoodJournal() {
 
       {/* Past Entries */}
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Past Entries</h3>
+        <h3 className="mb-3 text-sm font-semibold text-app-ink">Past Entries</h3>
         {sortedEntries.length === 0 ? (
           <EmptyState
             icon={Smile}
@@ -144,20 +143,20 @@ export default function MoodJournal() {
             description="Log your first mood above to start tracking how you feel."
           />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {sortedEntries.slice(0, 14).map((entry) => (
               <Card key={entry.id} hover>
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl">{MOOD_EMOJIS[entry.mood as MoodLevel]}</span>
-                  <div className="flex-1">
+                <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cat-teal/10 text-2xl">{MOOD_EMOJIS[entry.mood as MoodLevel]}</span>
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-neutral-900 dark:text-neutral-200">
+                      <span className="text-sm font-semibold text-app-ink">
                         {MOOD_LABELS[entry.mood as MoodLevel]}
                       </span>
-                      <span className="text-xs text-neutral-400 dark:text-neutral-500">{formatDate(entry.date)}</span>
+                      <span className="text-xs text-app-subtle">{formatDate(entry.date)}</span>
                     </div>
                     {entry.note && (
-                      <p className="mt-0.5 text-sm text-neutral-600 dark:text-neutral-400">{entry.note}</p>
+                      <p className="mt-0.5 break-words text-sm text-app-subtle">{entry.note}</p>
                     )}
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => removeEntry(entry.id)}>

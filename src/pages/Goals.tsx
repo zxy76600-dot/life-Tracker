@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import { Card, Button, Input, Modal, EmptyState, Badge, ProgressBar } from '../components/ui';
 import { useGoalStore } from '../stores/goalStore';
@@ -20,6 +20,7 @@ const CATEGORIES: { value: GoalCategory; label: string; color: string }[] = [
 ];
 
 export default function Goals() {
+  const shouldReduceMotion = useReducedMotion();
   const { goals, addGoal, removeGoal, toggleMilestone, toggleGoalComplete } = useGoalStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -56,12 +57,14 @@ export default function Goals() {
     : goals.filter((g) => g.category === filterCategory);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-          {goals.filter((g) => g.completed).length} of {goals.length} goals completed
-        </p>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cat-green">Long-term progress</p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-app-ink">Goals</h2>
+          <p className="mt-1 text-sm text-app-subtle"><span className="font-semibold text-app-ink">{goals.filter((g) => g.completed).length} of {goals.length}</span> goals completed</p>
+        </div>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus size={18} />
           Add Goal
@@ -72,10 +75,10 @@ export default function Goals() {
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilterCategory('all')}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer border ${
+          className={`min-h-9 rounded-full px-4 py-2 text-xs font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-app-bg cursor-pointer border ${
             filterCategory === 'all'
-              ? 'border-neutral-900 bg-neutral-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-neutral-950'
-              : 'border-neutral-200 bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+              ? 'border-accent-contrast bg-accent-contrast text-white shadow-accent'
+              : 'border-app-border bg-app-card text-app-subtle hover:border-accent/30 hover:bg-accent-soft hover:text-app-ink dark:hover:bg-accent/10'
           }`}
         >
           All
@@ -84,10 +87,10 @@ export default function Goals() {
           <button
             key={cat.value}
             onClick={() => setFilterCategory(cat.value)}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer border ${
+            className={`min-h-9 rounded-full px-4 py-2 text-xs font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-app-bg cursor-pointer border ${
               filterCategory === cat.value
-                ? 'border-neutral-900 bg-neutral-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-neutral-950'
-                : 'border-neutral-200 bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+                ? 'border-accent-contrast bg-accent-contrast text-white shadow-accent'
+                : 'border-app-border bg-app-card text-app-subtle hover:border-accent/30 hover:bg-accent-soft hover:text-app-ink dark:hover:bg-accent/10'
             }`}
           >
             {cat.label}
@@ -120,12 +123,12 @@ export default function Goals() {
               return (
                 <motion.div
                   key={goal.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
+                  layout={!shouldReduceMotion}
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
+                  exit={shouldReduceMotion ? undefined : { opacity: 0, x: -40 }}
                 >
-                  <Card>
+                  <Card className={`border-l-4 ${categoryInfo?.color === 'emerald' ? 'border-l-cat-green' : categoryInfo?.color === 'blue' ? 'border-l-cat-blue' : categoryInfo?.color === 'purple' ? 'border-l-cat-indigo' : categoryInfo?.color === 'amber' ? 'border-l-cat-amber' : categoryInfo?.color === 'cyan' ? 'border-l-cat-teal' : 'border-l-accent'}`}>
                     <div className="space-y-4">
                       <div className="flex items-start justify-between">
                         <div>
@@ -137,11 +140,11 @@ export default function Goals() {
                               <Badge variant="emerald">✅ Completed</Badge>
                             )}
                           </div>
-                          <h3 className={`text-lg font-semibold ${goal.completed ? 'text-neutral-400 line-through dark:text-neutral-500' : 'text-neutral-900 dark:text-white'}`}>
+                          <h3 className={`text-lg font-semibold ${goal.completed ? 'text-app-subtle line-through' : 'text-app-ink'}`}>
                             {goal.title}
                           </h3>
                           {goal.description && (
-                            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{goal.description}</p>
+                            <p className="mt-1 text-sm leading-6 text-app-subtle">{goal.description}</p>
                           )}
                         </div>
                         <div className="flex gap-1">
@@ -151,7 +154,7 @@ export default function Goals() {
                             onClick={() => toggleGoalComplete(goal.id)}
                             aria-label={goal.completed ? 'Reopen goal' : 'Complete goal'}
                           >
-                            {goal.completed ? <CheckCircle2 size={18} className="text-emerald-500" /> : <Circle size={18} className="text-neutral-400 dark:text-neutral-600" />}
+                              {goal.completed ? <CheckCircle2 size={18} className="text-cat-green" /> : <Circle size={18} className="text-app-subtle" />}
                           </Button>
                           <Button
                             variant="ghost"
@@ -179,16 +182,16 @@ export default function Goals() {
                             <button
                               key={milestone.id}
                               onClick={() => toggleMilestone(goal.id, milestone.id)}
-                              className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800/60 cursor-pointer"
+                              className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors motion-reduce:transition-none hover:bg-app-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer"
                             >
                               {milestone.completed ? (
-                                <CheckCircle2 size={16} className="shrink-0 text-emerald-500" />
+                                <CheckCircle2 size={16} className="shrink-0 text-cat-green" />
                               ) : (
-                                <Circle size={16} className="shrink-0 text-neutral-400 dark:text-neutral-600" />
+                                <Circle size={16} className="shrink-0 text-app-subtle" />
                               )}
                               <span
                                 className={`text-sm ${
-                                  milestone.completed ? 'text-neutral-400 line-through dark:text-neutral-500' : 'text-neutral-700 dark:text-neutral-300'
+                                  milestone.completed ? 'text-app-subtle line-through' : 'text-app-ink'
                                 }`}
                               >
                                 {milestone.title}
@@ -218,9 +221,9 @@ export default function Goals() {
           />
 
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">Description</label>
+            <label className="block text-sm font-medium text-app-ink">Description</label>
             <textarea
-              className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 shadow-sm text-neutral-900 placeholder:text-neutral-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+              className="w-full rounded-card border border-app-border bg-app-card px-4 py-3 text-app-ink shadow-sm placeholder:text-app-subtle focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               rows={2}
               placeholder="Optional description..."
               value={newDescription}
@@ -230,16 +233,18 @@ export default function Goals() {
 
           {/* Category selector */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Category</label>
+            <label className="mb-2 block text-sm font-medium text-app-ink">Category</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.value}
+                  type="button"
+                  aria-pressed={newCategory === cat.value}
                   onClick={() => setNewCategory(cat.value)}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer border ${
+                  className={`min-h-9 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer border ${
                     newCategory === cat.value
-                      ? 'border-neutral-900 bg-neutral-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-neutral-950'
-                      : 'border-neutral-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
+                      ? 'border-accent-contrast bg-accent-contrast text-white shadow-accent'
+                      : 'border-app-border bg-app-card text-app-subtle hover:border-accent/30 hover:bg-accent-soft hover:text-app-ink dark:hover:bg-accent/10'
                   }`}
                 >
                   {cat.label}
@@ -257,7 +262,7 @@ export default function Goals() {
 
           {/* Milestones */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <label className="mb-2 block text-sm font-medium text-app-ink">
               Milestones (optional)
             </label>
             {milestoneInputs.map((m, i) => (

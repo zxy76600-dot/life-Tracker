@@ -13,10 +13,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700 shadow-sm shadow-blue-500/20',
-  secondary: 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300 border border-neutral-200/80 dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-800',
-  danger: 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20',
-  ghost: 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-white dark:hover:bg-neutral-800',
+  primary: 'bg-accent-contrast text-white hover:brightness-95 active:brightness-90 shadow-accent',
+  secondary: 'border border-app-border bg-app-card text-app-ink hover:border-accent/30 hover:bg-accent-soft active:bg-accent/15 dark:hover:bg-accent/10',
+  danger: 'bg-accent/10 text-app-ink hover:bg-accent/15',
+  ghost: 'text-app-subtle hover:bg-app-muted hover:text-app-ink',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -36,9 +36,9 @@ export function Button({
   return (
     <button
       className={`
-        inline-flex items-center justify-center gap-2 rounded-xl
-        font-medium transition-all duration-200 cursor-pointer
-        focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black
+        inline-flex min-h-10 items-center justify-center gap-2 rounded-card
+        font-semibold transition-colors duration-200 motion-reduce:transition-none cursor-pointer
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg
         disabled:pointer-events-none disabled:opacity-50
         ${variantStyles[variant]}
         ${sizeStyles[size]}

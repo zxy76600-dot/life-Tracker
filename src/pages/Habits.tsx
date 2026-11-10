@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Plus, Check, Trash2, Flame } from 'lucide-react';
 import { Card, Button, Input, Modal, EmptyState, Badge } from '../components/ui';
 import { useHabitStore } from '../stores/habitStore';
@@ -13,6 +13,7 @@ import { calculateStreak, getTodayStr } from '../utils/helpers';
 const HABIT_COLORS = ['blue', 'emerald', 'purple', 'amber', 'red', 'cyan'];
 
 export default function Habits() {
+  const shouldReduceMotion = useReducedMotion();
   const { habits, addHabit, removeHabit, toggleHabitCompletion } = useHabitStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
@@ -37,13 +38,13 @@ export default function Habits() {
   const completionRate = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header with stats */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            {completedToday} of {habits.length} completed today ({completionRate}%)
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-app-ink">Daily rhythm</p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-app-ink">Habits</h2>
+          <p className="mt-1 text-sm text-app-subtle"><span className="font-semibold text-app-ink">{completedToday} of {habits.length}</span> completed today · {completionRate}%</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus size={18} />
@@ -71,13 +72,13 @@ export default function Habits() {
               const isCompleted = habit.completedDates.includes(today);
               const streak = calculateStreak(habit.completedDates);
 
-              const colorMap: Record<string, { bg: string; border: string; text: string }> = {
-                blue: { bg: 'bg-blue-500', border: 'border-blue-500/30', text: 'text-blue-500' },
-                emerald: { bg: 'bg-emerald-500', border: 'border-emerald-500/30', text: 'text-emerald-500' },
-                purple: { bg: 'bg-purple-500', border: 'border-purple-500/30', text: 'text-purple-500' },
-                amber: { bg: 'bg-amber-500', border: 'border-amber-500/30', text: 'text-amber-500' },
-                red: { bg: 'bg-red-500', border: 'border-red-500/30', text: 'text-red-500' },
-                cyan: { bg: 'bg-cyan-500', border: 'border-cyan-500/30', text: 'text-cyan-500' },
+              const colorMap: Record<string, { bg: string; edge: string; tint: string }> = {
+                blue: { bg: 'bg-cat-blue', edge: 'border-l-cat-blue', tint: 'bg-cat-blue/10 text-cat-blue' },
+                emerald: { bg: 'bg-cat-green', edge: 'border-l-cat-green', tint: 'bg-cat-green/10 text-cat-green-ink' },
+                purple: { bg: 'bg-cat-indigo', edge: 'border-l-cat-indigo', tint: 'bg-cat-indigo/10 text-cat-indigo' },
+                amber: { bg: 'bg-cat-amber', edge: 'border-l-cat-amber', tint: 'bg-cat-amber/10 text-cat-amber-ink' },
+                red: { bg: 'bg-accent-contrast', edge: 'border-l-accent', tint: 'bg-accent/10 text-app-ink' },
+                cyan: { bg: 'bg-cat-teal', edge: 'border-l-cat-teal', tint: 'bg-cat-teal/10 text-cat-teal-ink' },
               };
 
               const colors = colorMap[habit.color] ?? colorMap.blue;
@@ -85,22 +86,22 @@ export default function Habits() {
               return (
                 <motion.div
                   key={habit.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
+                  layout={!shouldReduceMotion}
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
+                  exit={shouldReduceMotion ? undefined : { opacity: 0, x: -40 }}
                 >
-                  <Card hover>
-                    <div className="flex items-center gap-4">
+                  <Card hover className={`border-l-4 p-4 sm:p-5 ${colors.edge}`}>
+                    <div className="flex items-center gap-3 sm:gap-4">
                       {/* Completion checkbox */}
                       <button
                         onClick={() => toggleHabitCompletion(habit.id)}
                         className={`
                           flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 cursor-pointer
-                          transition-all duration-300
+                          transition-colors duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-app-card
                           ${isCompleted
-                            ? `${colors.bg} border-transparent text-white shadow-sm`
-                            : `border-neutral-300 text-transparent hover:${colors.border} dark:border-neutral-700`
+                            ? `${colors.bg} border-transparent text-white shadow-card`
+                            : 'border-app-border bg-app-card text-transparent hover:border-accent/60'
                           }
                         `}
                         aria-label={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
@@ -111,16 +112,16 @@ export default function Habits() {
                       {/* Habit info */}
                       <div className="flex-1">
                         <h3
-                          className={`font-medium ${
-                            isCompleted ? 'text-neutral-400 line-through dark:text-neutral-500' : 'text-neutral-900 dark:text-neutral-100'
+                          className={`font-semibold ${
+                            isCompleted ? 'text-app-subtle line-through' : 'text-app-ink'
                           }`}
                         >
                           {habit.name}
                         </h3>
                         <div className="mt-1 flex items-center gap-2">
                           {streak > 0 && (
-                            <Badge variant={habit.color === 'amber' ? 'amber' : 'emerald'}>
-                              <Flame size={12} className="mr-1" />
+                            <Badge variant={habit.color === 'amber' ? 'amber' : 'emerald'} className={colors.tint}>
+                              <Flame size={12} className="mr-1" aria-hidden="true" />
                               {streak} day streak
                             </Badge>
                           )}
@@ -159,25 +160,27 @@ export default function Habits() {
 
           {/* Color picker */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <label className="mb-2 block text-sm font-medium text-app-ink">
               Color
             </label>
             <div className="flex gap-2">
               {HABIT_COLORS.map((color) => {
                 const bgMap: Record<string, string> = {
-                  blue: 'bg-blue-500',
-                  emerald: 'bg-emerald-500',
-                  purple: 'bg-purple-500',
-                  amber: 'bg-amber-500',
-                  red: 'bg-red-500',
-                  cyan: 'bg-cyan-500',
+                  blue: 'bg-cat-blue',
+                  emerald: 'bg-cat-green',
+                  purple: 'bg-cat-indigo',
+                  amber: 'bg-cat-amber',
+                  red: 'bg-accent',
+                  cyan: 'bg-cat-teal',
                 };
                 return (
                   <button
                     key={color}
                     onClick={() => setSelectedColor(color)}
-                    className={`h-8 w-8 rounded-full ${bgMap[color]} transition-all cursor-pointer
-                      ${selectedColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-white dark:ring-offset-neutral-900' : 'opacity-60 hover:opacity-100'}
+                    type="button"
+                    aria-pressed={selectedColor === color}
+                    className={`h-9 w-9 rounded-full ${bgMap[color]} transition-opacity motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-app-card cursor-pointer
+                      ${selectedColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-app-card shadow-card' : 'opacity-60 hover:opacity-100'}
                     `}
                     aria-label={`Select ${color} color`}
                   />

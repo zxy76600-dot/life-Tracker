@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 /**
  * Card — A reusable container with adaptive true black / white theme styling.
@@ -16,16 +16,16 @@ interface CardProps {
 }
 
 export function Card({ children, className = '', hover = false }: CardProps) {
+  const shouldReduceMotion = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
       className={`
-        rounded-2xl border border-neutral-200/90 bg-white p-5 shadow-sm
-        dark:border-neutral-800/90 dark:bg-neutral-900/90 dark:shadow-none
-        backdrop-blur-sm transition-all duration-200
-        ${hover ? 'hover:border-neutral-300 hover:shadow-md dark:hover:border-neutral-700 dark:hover:bg-neutral-900' : ''}
+        rounded-card-lg border border-app-border bg-app-card p-5 shadow-card
+        transition-[border-color,box-shadow,transform] duration-200 motion-reduce:transition-none
+        ${hover ? 'hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-card-hover motion-reduce:hover:translate-y-0' : ''}
         ${className}
       `}
     >

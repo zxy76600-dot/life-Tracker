@@ -49,26 +49,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside
         className={`
           fixed left-0 top-0 z-30 flex h-full w-64 flex-col
-          border-r border-neutral-200/80 bg-white
-          dark:border-neutral-800 dark:bg-black
+          border-r border-app-border bg-app-card shadow-sm
           transition-all duration-300 ease-in-out
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         {/* Logo / Brand */}
-        <div className="flex h-16 items-center justify-between border-b border-neutral-200/80 px-5 dark:border-neutral-800">
+        <div className="flex h-16 items-center justify-between border-b border-app-border px-5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-950 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-card bg-accent text-white shadow-accent">
               <Zap size={20} />
             </div>
-            <span className="text-lg font-bold text-neutral-900 dark:text-white">Life Tracker</span>
+            <span className="text-lg font-bold tracking-tight text-app-ink">Life Tracker</span>
           </div>
 
           {/* Close button (mobile only) */}
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-white lg:hidden cursor-pointer"
+            className="rounded-xl p-1.5 text-app-subtle hover:bg-app-muted hover:text-app-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent lg:hidden cursor-pointer"
             aria-label="Close sidebar"
           >
             <X size={20} />
@@ -84,11 +83,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               end={item.to === '/'}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200
+                `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
                 ${
                   isActive
-                    ? 'bg-neutral-900 text-white font-semibold dark:bg-neutral-800 dark:text-white shadow-sm'
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white'
+                    ? 'bg-accent-contrast text-white font-semibold shadow-accent'
+                    : 'text-app-subtle hover:bg-app-muted hover:text-app-ink'
                 }`
               }
             >
@@ -99,10 +98,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer with theme switch */}
-        <div className="border-t border-neutral-200/80 p-4 dark:border-neutral-800">
+        <div className="border-t border-app-border p-4">
           <button
             onClick={toggleTheme}
-            className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-200 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 cursor-pointer"
+            className="flex min-h-11 w-full items-center justify-between rounded-xl border border-app-border bg-app-muted px-3 py-2 text-xs font-medium text-app-ink transition-colors motion-reduce:transition-none hover:border-accent/30 hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:hover:bg-accent/10 cursor-pointer"
           >
             <span className="flex items-center gap-2">
               {theme === 'dark' ? (
@@ -117,9 +116,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </>
               )}
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-neutral-400">Switch</span>
+            <span className="text-[10px] uppercase tracking-wider text-app-subtle">Switch</span>
           </button>
-          <p className="mt-2 text-center text-[11px] text-neutral-400 dark:text-neutral-600">
+          <p className="mt-3 text-center text-[11px] text-app-subtle">
             Life Tracker v1.1
           </p>
         </div>

@@ -99,16 +99,16 @@ export default function Settings() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6 sm:space-y-8">
       {/* Theme & Appearance */}
       <Card>
         <div className="flex items-center gap-3 mb-3">
-          <div className="rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 p-2.5">
+          <div className="rounded-xl bg-accent/10 p-2.5 text-accent">
             <Palette size={20} />
           </div>
           <div>
-            <h3 className="font-semibold text-neutral-900 dark:text-white">Appearance & Theme</h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">Choose between Pure Black (Dark) and Pure White (Light).</p>
+            <h3 className="font-semibold text-app-ink">Appearance & Theme</h3>
+            <p className="text-xs text-app-subtle">Choose between Pure Black (Dark) and Pure White (Light).</p>
           </div>
         </div>
 
@@ -116,51 +116,51 @@ export default function Settings() {
           {/* True Black Dark theme card */}
           <button
             onClick={() => setTheme('dark')}
-            className={`flex items-center justify-between rounded-2xl border p-4 text-left transition-all cursor-pointer ${
+            className={`flex items-center justify-between rounded-card-lg border p-4 text-left transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer ${
               theme === 'dark'
-                ? 'border-white bg-black text-white ring-2 ring-white/30 shadow-lg'
-                : 'border-neutral-200 bg-neutral-100 text-neutral-700 hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300'
+              ? 'border-accent bg-accent/5 text-app-ink ring-2 ring-accent/30 shadow-card'
+              : 'border-app-border bg-app-muted text-app-ink hover:border-accent/30'
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-white border border-neutral-700">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-app-border bg-app-card text-app-ink">
                 <Moon size={20} />
               </div>
               <div>
                 <p className="font-semibold text-sm">True Black Theme</p>
-                <p className="text-xs text-neutral-400">Pure midnight black & neutral</p>
+                <p className="text-xs text-app-subtle">Pure midnight black & neutral</p>
               </div>
             </div>
-            {theme === 'dark' && <Check size={18} className="text-white" />}
+            {theme === 'dark' && <Check size={18} className="text-accent" />}
           </button>
 
           {/* White / Light theme card */}
           <button
             onClick={() => setTheme('light')}
-            className={`flex items-center justify-between rounded-2xl border p-4 text-left transition-all cursor-pointer ${
+            className={`flex items-center justify-between rounded-card-lg border p-4 text-left transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer ${
               theme === 'light'
-                ? 'border-neutral-900 bg-white text-neutral-900 ring-2 ring-neutral-900/20 shadow-md'
-                : 'border-neutral-200 bg-neutral-100 text-neutral-700 hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300'
+              ? 'border-accent bg-accent/5 text-app-ink ring-2 ring-accent/30 shadow-card'
+              : 'border-app-border bg-app-muted text-app-ink hover:border-accent/30'
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500 border border-amber-200">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cat-amber/20 bg-cat-amber/10 text-cat-amber">
                 <Sun size={20} />
               </div>
               <div>
                 <p className="font-semibold text-sm">Pure White Theme</p>
-                <p className="text-xs text-neutral-500">Crisp, clean & bright</p>
+                <p className="text-xs text-app-subtle">Crisp, clean & bright</p>
               </div>
             </div>
-            {theme === 'light' && <Check size={18} className="text-neutral-900" />}
+            {theme === 'light' && <Check size={18} className="text-accent" />}
           </button>
         </div>
       </Card>
 
       {/* Data Management */}
       <Card>
-        <h3 className="mb-2 font-semibold text-neutral-900 dark:text-white">Data Management</h3>
-        <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
+        <h3 className="mb-2 font-semibold text-app-ink">Data Management</h3>
+        <p className="mb-4 text-sm leading-6 text-app-subtle">
           Your tracker data is stored securely in your signed-in cloud account. Theme preference remains on this device.
         </p>
 
@@ -192,17 +192,17 @@ export default function Settings() {
         </div>
 
         {exportMessage && (
-          <p role="status" className={`mt-3 text-sm ${messageIsError ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{exportMessage}</p>
+          <p role="status" className={`mt-3 text-sm ${messageIsError ? 'text-app-ink' : 'text-cat-green'}`}>{exportMessage}</p>
         )}
       </Card>
 
       {/* About */}
       <Card>
-        <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">About Life Tracker</h3>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+        <h3 className="font-semibold text-app-ink mb-2">About Life Tracker</h3>
+        <p className="text-sm leading-6 text-app-subtle">
           Life Tracker is your personal all-in-one life management dashboard. Track habits, set goals, log moods, monitor fitness, and manage finances — all in one clean, customizable interface.
         </p>
-        <p className="mt-2 text-xs text-neutral-400 dark:text-neutral-500">Version 1.2.0 • Pure Black & White Themes</p>
+        <p className="mt-2 text-xs text-app-subtle">Version 1.2.0 • Pure Black & White Themes</p>
       </Card>
     </div>
   );

@@ -9,5 +9,5 @@ export function CloudNotice() {
     return () => window.removeEventListener('life-tracker-cloud-error', onError);
   }, []);
   if (!message) return null;
-  return <div role="alert" className="fixed bottom-20 right-4 z-50 flex max-w-md items-start gap-3 rounded-xl border border-red-300 bg-white p-4 text-sm text-red-700 shadow-lg dark:border-red-900 dark:bg-neutral-900 dark:text-red-300 lg:bottom-4"><span>{message}</span><button aria-label="Dismiss message" onClick={() => setMessage('')}><X size={16} /></button></div>;
+  return <div role="alert" className="fixed bottom-24 left-4 right-4 z-50 flex max-w-md items-start gap-3 rounded-card-lg border border-accent/20 bg-app-card p-4 text-sm text-app-ink shadow-card-hover sm:left-auto sm:right-5 lg:bottom-5"><span className="flex-1 leading-5">{message}</span><button type="button" aria-label="Dismiss message" onClick={() => setMessage('')} className="rounded-lg p-1 text-app-subtle hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"><X size={16} /></button></div>;
 }

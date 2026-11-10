@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Plus, Trash2, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { Card, Button, Input, Modal, EmptyState, Badge, Select } from '../components/ui';
 import { useFinanceStore } from '../stores/financeStore';
-import { useThemeStore } from '../stores/themeStore';
 import { formatCurrency, formatDate, getTodayStr } from '../utils/helpers';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types';
 import {
@@ -15,13 +14,11 @@ import { format } from 'date-fns';
  * Finances Page — Track income and expenses with true black and white themes.
  */
 
-const PIE_COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16', '#6366f1'];
+const PIE_COLORS = ['var(--color-cat-blue)', 'var(--color-cat-green)', 'var(--color-cat-indigo)', 'var(--color-cat-amber)', 'var(--color-accent)', 'var(--color-cat-teal)', 'var(--color-accent-strong)', 'var(--color-cat-indigo)', 'var(--color-cat-amber)'];
 
 export default function Finances() {
+  const shouldReduceMotion = useReducedMotion();
   const { transactions, addTransaction, removeTransaction } = useFinanceStore();
-  const { theme } = useThemeStore();
-  const isDark = theme === 'dark';
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [txType, setTxType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
@@ -66,39 +63,39 @@ export default function Finances() {
     : EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <Card className="border-l-4 border-l-cat-green">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-emerald-500/10 p-2.5">
-              <TrendingUp size={20} className="text-emerald-500" />
+            <div className="rounded-xl bg-cat-green/10 p-2.5">
+              <TrendingUp size={20} className="text-cat-green" />
             </div>
             <div>
-              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Income</p>
-              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(monthlyIncome)}</p>
+              <p className="text-xs font-medium text-app-subtle">Income</p>
+              <p className="mt-1 text-xl font-bold text-cat-green-ink tabular-nums">{formatCurrency(monthlyIncome)}</p>
             </div>
           </div>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-accent">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-red-500/10 p-2.5">
-              <TrendingDown size={20} className="text-red-500" />
+            <div className="rounded-xl bg-accent/10 p-2.5">
+              <TrendingDown size={20} className="text-accent" />
             </div>
             <div>
-              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Expenses</p>
-              <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatCurrency(monthlyExpenses)}</p>
+              <p className="text-xs font-medium text-app-subtle">Expenses</p>
+              <p className="mt-1 text-xl font-bold text-app-ink tabular-nums">{formatCurrency(monthlyExpenses)}</p>
             </div>
           </div>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-cat-indigo">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-blue-500/10 p-2.5">
-              <Wallet size={20} className="text-blue-500" />
+            <div className="rounded-xl bg-cat-indigo/10 p-2.5">
+              <Wallet size={20} className="text-cat-indigo" />
             </div>
             <div>
-              <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Balance</p>
-              <p className={`text-xl font-bold ${monthlyIncome - monthlyExpenses >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+              <p className="text-xs font-medium text-app-subtle">Balance</p>
+              <p className={`mt-1 text-xl font-bold tabular-nums ${monthlyIncome - monthlyExpenses >= 0 ? 'text-cat-green-ink' : 'text-app-ink'}`}>
                 {formatCurrency(monthlyIncome - monthlyExpenses)}
               </p>
             </div>
@@ -109,7 +106,7 @@ export default function Finances() {
       {/* Pie Chart */}
       {pieData.length > 0 && (
         <Card>
-          <h3 className="mb-4 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Expense Breakdown</h3>
+          <h3 className="mb-4 text-sm font-semibold text-app-ink">Expense Breakdown</h3>
           <div className="flex flex-col items-center gap-6 sm:flex-row">
             <ResponsiveContainer width="100%" height={200} className="max-w-[200px]">
               <PieChart>
@@ -128,11 +125,11 @@ export default function Finances() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: isDark ? '#171717' : '#ffffff',
-                    border: `1px solid ${isDark ? '#262626' : '#e5e5e5'}`,
-                    borderRadius: '10px',
-                    color: isDark ? '#ffffff' : '#0a0a0a',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  backgroundColor: 'var(--app-card)',
+                  border: '1px solid var(--app-border)',
+                  borderRadius: 'var(--radius-card)',
+                  color: 'var(--app-ink)',
+                  boxShadow: 'var(--shadow-card)',
                   }}
                   formatter={(value) => formatCurrency(Number(value) || 0)}
                 />
@@ -142,7 +139,7 @@ export default function Finances() {
               {pieData.map((item, i) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400">{item.name}</span>
+                  <span className="text-xs text-app-subtle">{item.name}</span>
                 </div>
               ))}
             </div>
@@ -152,7 +149,7 @@ export default function Finances() {
 
       {/* Transactions Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">Transactions</h3>
+        <h3 className="text-xl font-bold tracking-tight text-app-ink">Transactions</h3>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus size={18} />
           Add Transaction
@@ -178,28 +175,28 @@ export default function Finances() {
             {sortedTransactions.slice(0, 20).map((tx) => (
               <motion.div
                 key={tx.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
+                layout={!shouldReduceMotion}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
+                exit={shouldReduceMotion ? undefined : { opacity: 0 }}
               >
-                <Card hover>
-                  <div className="flex items-center gap-4">
-                    <div className={`rounded-xl p-2.5 ${tx.type === 'income' ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                <Card hover className="p-4 sm:p-5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-3 sm:flex-nowrap sm:gap-4">
+                    <div className={`shrink-0 rounded-xl p-2.5 ${tx.type === 'income' ? 'bg-cat-green/10' : 'bg-accent/10'}`}>
                       {tx.type === 'income' ? (
-                        <TrendingUp size={18} className="text-emerald-500" />
+                        <TrendingUp size={18} className="text-cat-green" />
                       ) : (
-                        <TrendingDown size={18} className="text-red-500" />
+                        <TrendingDown size={18} className="text-accent" />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-neutral-900 dark:text-white">{tx.description || tx.category}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <span className="max-w-full break-words font-semibold text-app-ink">{tx.description || tx.category}</span>
                         <Badge variant={tx.type === 'income' ? 'emerald' : 'red'}>{tx.category}</Badge>
                       </div>
-                      <span className="text-xs text-neutral-400 dark:text-neutral-500">{formatDate(tx.date)}</span>
+                      <span className="text-xs text-app-subtle">{formatDate(tx.date)}</span>
                     </div>
-                    <span className={`font-semibold ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    <span className={`ml-auto whitespace-nowrap text-sm font-bold tabular-nums sm:ml-0 ${tx.type === 'income' ? 'text-cat-green-ink' : 'text-app-ink'}`}>
                       {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
                     </span>
                     <Button variant="ghost" size="sm" onClick={() => removeTransaction(tx.id)}>
@@ -217,23 +214,27 @@ export default function Finances() {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Transaction">
         <div className="space-y-4">
           {/* Type toggle */}
-          <div className="flex rounded-xl bg-neutral-100 p-1 dark:bg-neutral-800">
+          <div role="group" aria-label="Transaction type" className="grid grid-cols-2 rounded-xl bg-app-muted p-1">
             <button
+              type="button"
+              aria-pressed={txType === 'expense'}
               onClick={() => { setTxType('expense'); setCategory(''); }}
-              className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all cursor-pointer ${
+              className={`min-h-11 rounded-lg py-2 text-sm font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer ${
                 txType === 'expense'
-                  ? 'bg-white text-red-600 shadow-sm dark:bg-neutral-900 dark:text-red-400'
-                  : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400'
+                  ? 'bg-app-card text-accent shadow-card'
+                  : 'text-app-subtle hover:text-app-ink'
               }`}
             >
               Expense
             </button>
             <button
+              type="button"
+              aria-pressed={txType === 'income'}
               onClick={() => { setTxType('income'); setCategory(''); }}
-              className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all cursor-pointer ${
+              className={`min-h-11 rounded-lg py-2 text-sm font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cat-green cursor-pointer ${
                 txType === 'income'
-                  ? 'bg-white text-emerald-600 shadow-sm dark:bg-neutral-900 dark:text-emerald-400'
-                  : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400'
+                  ? 'bg-app-card text-cat-green shadow-card'
+                  : 'text-app-subtle hover:text-app-ink'
               }`}
             >
               Income

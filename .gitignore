@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# local tooling and build artifacts
+tmp/
+output/
+.agents/
+skills-lock.json

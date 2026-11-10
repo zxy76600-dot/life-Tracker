@@ -3,34 +3,36 @@ import { Card, Button } from '../components/ui';
 import { Download, Upload, Trash2, Palette, Sparkles, Sun, Moon, Check } from 'lucide-react';
 import { loadDemoData } from '../utils/demoData';
 import { useThemeStore } from '../stores/themeStore';
+import { clearCloudData, exportCloudBackup, getLegacyBackup, importLegacyBackup, type LegacyBackup } from '../lib/cloudData';
 
 /**
  * Settings Page — App customization, true black/white theme selector, data management.
  */
 export default function Settings() {
   const [exportMessage, setExportMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [messageIsError, setMessageIsError] = useState(false);
   const { theme, setTheme } = useThemeStore();
 
-  const handleLoadDemo = () => {
-    loadDemoData();
-    setExportMessage('✨ Sample data loaded! Refreshing...');
-    setTimeout(() => window.location.reload(), 1200);
+  const clearLegacyKeys = () => {
+    ['life-tracker-habits', 'life-tracker-goals', 'life-tracker-mood', 'life-tracker-fitness', 'life-tracker-finances'].forEach((key) => localStorage.removeItem(key));
   };
 
-  const handleExport = () => {
-    const data: Record<string, string | null> = {};
-    const keys = [
-      'life-tracker-habits',
-      'life-tracker-goals',
-      'life-tracker-mood',
-      'life-tracker-fitness',
-      'life-tracker-finances',
-      'life-tracker-theme',
-    ];
-    keys.forEach((key) => {
-      data[key] = localStorage.getItem(key);
-    });
+  const handleLoadDemo = async () => {
+    setBusy(true); setMessageIsError(false);
+    try {
+      await loadDemoData();
+      setExportMessage('Sample data loaded to your cloud account. Refreshing…');
+      setTimeout(() => window.location.reload(), 800);
+    } catch (error) {
+      setMessageIsError(true); setExportMessage(error instanceof Error ? error.message : 'Could not load sample data.');
+    } finally { setBusy(false); }
+  };
 
+  const handleExport = async () => {
+    setBusy(true); setMessageIsError(false);
+    try {
+    const data = await exportCloudBackup();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -38,8 +40,28 @@ export default function Settings() {
     a.download = `life-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setExportMessage('✅ Data exported successfully!');
-    setTimeout(() => setExportMessage(''), 3000);
+    setExportMessage('Cloud data exported successfully.');
+    } catch (error) { setMessageIsError(true); setExportMessage(error instanceof Error ? error.message : 'Could not export cloud data.'); }
+    finally { setBusy(false); }
+  };
+
+  const migrateBackup = async (backup: LegacyBackup) => {
+    await importLegacyBackup(backup);
+    if (backup['life-tracker-theme']) localStorage.setItem('life-tracker-theme', backup['life-tracker-theme']);
+    clearLegacyKeys();
+    setMessageIsError(false);
+    setExportMessage('Data imported to your cloud account successfully.');
+    window.location.reload();
+  };
+
+  const handleMigrateBrowserData = async () => {
+    const backup = getLegacyBackup();
+    const hasLocalData = Object.entries(backup).some(([key, value]) => key !== 'life-tracker-theme' && value !== null);
+    if (!hasLocalData) { setMessageIsError(true); setExportMessage('No browser tracker data was found to migrate.'); return; }
+    setBusy(true);
+    try { await migrateBackup(backup); }
+    catch (error) { setMessageIsError(true); setExportMessage(error instanceof Error ? error.message : 'Could not migrate browser data. Your local backup is still available.'); }
+    finally { setBusy(false); }
   };
 
   const handleImport = () => {
@@ -53,14 +75,13 @@ export default function Settings() {
       reader.onload = (ev) => {
         try {
           const data = JSON.parse(ev.target?.result as string);
-          Object.entries(data).forEach(([key, value]) => {
-            if (value) localStorage.setItem(key, value as string);
-          });
-          setExportMessage('✅ Data imported! Reloading...');
-          setTimeout(() => window.location.reload(), 1500);
-        } catch {
-          setExportMessage('❌ Invalid backup file.');
-          setTimeout(() => setExportMessage(''), 3000);
+          if (!data || typeof data !== 'object' || Array.isArray(data) || Object.values(data).some((value) => value !== null && typeof value !== 'string')) throw new Error('Invalid backup format.');
+          setBusy(true);
+          void migrateBackup(data as LegacyBackup).catch((error: unknown) => {
+            setMessageIsError(true); setExportMessage(error instanceof Error ? error.message : 'Could not restore this backup.');
+          }).finally(() => setBusy(false));
+        } catch (error) {
+          setMessageIsError(true); setExportMessage(error instanceof Error ? error.message : 'Invalid backup file.');
         }
       };
       reader.readAsText(file);
@@ -68,17 +89,12 @@ export default function Settings() {
     input.click();
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (window.confirm('Are you sure you want to delete ALL data? This cannot be undone!')) {
-      const keys = [
-        'life-tracker-habits',
-        'life-tracker-goals',
-        'life-tracker-mood',
-        'life-tracker-fitness',
-        'life-tracker-finances',
-      ];
-      keys.forEach((key) => localStorage.removeItem(key));
-      window.location.reload();
+      setBusy(true);
+      try { await clearCloudData(); clearLegacyKeys(); window.location.reload(); }
+      catch (error) { setMessageIsError(true); setExportMessage(error instanceof Error ? error.message : 'Could not clear cloud data.'); }
+      finally { setBusy(false); }
     }
   };
 
@@ -145,33 +161,38 @@ export default function Settings() {
       <Card>
         <h3 className="mb-2 font-semibold text-neutral-900 dark:text-white">Data Management</h3>
         <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
-          Your data is stored locally in your browser. Use these tools to backup, restore, or manage your data.
+          Your tracker data is stored securely in your signed-in cloud account. Theme preference remains on this device.
         </p>
 
         <div className="space-y-3">
-          <Button variant="primary" onClick={handleLoadDemo} className="w-full justify-start">
+          <Button variant="primary" onClick={() => void handleLoadDemo()} disabled={busy} className="w-full justify-start">
             <Sparkles size={18} />
             Load Sample / Demo Data
           </Button>
 
-          <Button variant="secondary" onClick={handleExport} className="w-full justify-start">
+          <Button variant="secondary" onClick={() => void handleExport()} disabled={busy} className="w-full justify-start">
             <Download size={18} />
             Export Data (Backup)
           </Button>
 
-          <Button variant="secondary" onClick={handleImport} className="w-full justify-start">
+          <Button variant="secondary" onClick={handleImport} disabled={busy} className="w-full justify-start">
             <Upload size={18} />
-            Import Data (Restore)
+            Restore Backup to Cloud
           </Button>
 
-          <Button variant="danger" onClick={handleClearAll} className="w-full justify-start">
+          <Button variant="secondary" onClick={() => void handleMigrateBrowserData()} disabled={busy} className="w-full justify-start">
+            <Upload size={18} />
+            Migrate Browser Data to Cloud
+          </Button>
+
+          <Button variant="danger" onClick={() => void handleClearAll()} disabled={busy} className="w-full justify-start">
             <Trash2 size={18} />
             Clear All Data
           </Button>
         </div>
 
         {exportMessage && (
-          <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">{exportMessage}</p>
+          <p role="status" className={`mt-3 text-sm ${messageIsError ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{exportMessage}</p>
         )}
       </Card>
 

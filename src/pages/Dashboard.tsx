@@ -7,6 +7,7 @@ import { useFinanceStore } from '../stores/financeStore';
 import { useThemeStore } from '../stores/themeStore';
 import { calculateStreak, getTodayStr, formatCurrency } from '../utils/helpers';
 import { loadDemoData } from '../utils/demoData';
+import { reportCloudError } from '../lib/cloudFeedback';
 import {
   CheckSquare,
   Target,
@@ -165,8 +166,7 @@ export default function Dashboard() {
             </div>
             <Button
               onClick={() => {
-                loadDemoData();
-                window.location.reload();
+                void loadDemoData().then(() => window.location.reload()).catch(reportCloudError);
               }}
               className="shrink-0"
             >

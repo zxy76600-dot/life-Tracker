@@ -1,4 +1,10 @@
-import type { DailyHealth, FinanceBudget, FinanceSettings, Goal, Habit, Loan, LoanPayment, MoodEntry, RecurringTransactionSeries, SavingsContribution, SavingsGoal, Todo, TodoSeries, TodoSubtask, Transaction, Wallet, WalletTransfer, Workout } from '../types';
+import type {
+  DailyHealth, FinanceBudget, FinanceSettings, Goal, Habit, Loan, LoanPayment,
+  MoodEntry, RecurringTransactionSeries, SavingsContribution, SavingsGoal,
+  Todo, TodoSeries, TodoSubtask, Transaction, Wallet, WalletTransfer, Workout,
+  FitnessProfile, CustomExercise, FitnessRoutine,
+  FitnessPlan, FitnessPlanDay, FitnessWorkoutLog, FitnessWeeklyCheckin
+} from '../types';
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { generateId, getTodayStr } from '../utils/helpers';
 import { requireSupabase } from './supabase';
@@ -382,6 +388,345 @@ export async function saveDailyHealth(data: DailyHealth) {
   const user_id = await currentUserId();
   const { error } = await client.from('daily_health').upsert({ user_id, health_date: data.date, sleep_hours: data.sleepHours, water_glasses: data.waterGlasses }, { onConflict: 'user_id,health_date' });
   if (error) throw error;
+}
+
+// ----------------------------------------------------
+// Upgraded Fitness Cloud Functions (Phase 1)
+// ----------------------------------------------------
+
+export function prefixCustomExerciseId(id: string): string {
+  return id.startsWith('custom:') ? id : `custom:${id}`;
+}
+
+export async function fetchFitnessData() {
+  const client = requireSupabase();
+  const [profileRes, customExercisesRes, routinesRes, routineExercisesRes, plansRes, planDaysRes, workoutLogsRes, setLogsRes, checkinsRes] = await Promise.all([
+    client.from('fitness_profiles').select('*').maybeSingle(),
+    client.from('custom_exercises').select('*').order('created_at'),
+    client.from('fitness_routines').select('*').order('created_at'),
+    client.from('fitness_routine_exercises').select('*').order('position'),
+    client.from('fitness_plans').select('*').order('week_start_date', { ascending: false }),
+    client.from('fitness_plan_days').select('*').order('day_of_week').order('position'),
+    client.from('fitness_workout_logs').select('*').order('workout_date', { ascending: false }),
+    client.from('fitness_set_logs').select('*').order('set_number'),
+    client.from('fitness_weekly_checkins').select('*').order('week_start_date', { ascending: false }),
+  ]);
+
+  const fitnessResults = [profileRes, customExercisesRes, routinesRes, routineExercisesRes, plansRes, planDaysRes, workoutLogsRes, setLogsRes, checkinsRes];
+  const fitnessSchemaUnavailable = fitnessResults.some((result) => result.error && ['PGRST205', '42P01', '42703'].includes(result.error.code));
+  if (!fitnessSchemaUnavailable) {
+    for (const result of fitnessResults) if (result.error) throw result.error;
+  }
+
+  if (fitnessSchemaUnavailable) {
+    return {
+      fitnessSchemaAvailable: false,
+      profile: null as FitnessProfile | null,
+      customExercises: [] as CustomExercise[],
+      routines: [] as FitnessRoutine[],
+      plans: [] as FitnessPlan[],
+      workoutLogs: [] as FitnessWorkoutLog[],
+      weeklyCheckins: [] as FitnessWeeklyCheckin[],
+    };
+  }
+
+  const profileData = profileRes.data;
+  const profile: FitnessProfile | null = profileData ? {
+    goalMode: profileData.goal_mode,
+    experience: profileData.experience,
+    trainingDaysPerWeek: profileData.training_days_per_week,
+    equipment: profileData.equipment,
+    units: profileData.units,
+    confirmed18OrOlder: profileData.confirmed_18_or_older ?? false,
+    hideWeight: profileData.hide_weight ?? false,
+    createdAt: profileData.created_at,
+    updatedAt: profileData.updated_at,
+  } : null;
+
+  const customExercises: CustomExercise[] = (customExercisesRes.data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    muscleGroup: row.muscle_group,
+    equipment: row.equipment,
+    isBodyweight: row.is_bodyweight ?? false,
+    formCues: row.form_cues ?? [],
+    substitutes: row.substitutes ?? [],
+    createdAt: row.created_at,
+  }));
+
+  const routineExercisesData = routineExercisesRes.data ?? [];
+  const routines: FitnessRoutine[] = (routinesRes.data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    notes: row.notes ?? '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    exercises: routineExercisesData
+      .filter((re) => re.routine_id === row.id)
+      .map((re) => ({
+        id: re.id,
+        routineId: re.routine_id,
+        exerciseId: re.exercise_id,
+        targetSets: re.target_sets,
+        minReps: re.min_reps,
+        maxReps: re.max_reps,
+        targetWeight: re.target_weight == null ? null : Number(re.target_weight),
+        position: re.position,
+      })),
+  }));
+
+  const planDaysData = planDaysRes.data ?? [];
+  const plans: FitnessPlan[] = (plansRes.data ?? []).map((row) => ({
+    id: row.id,
+    weekStartDate: row.week_start_date,
+    goalMode: row.goal_mode,
+    notes: row.notes ?? '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    days: planDaysData
+      .filter((pd) => pd.plan_id === row.id)
+      .map((pd) => ({
+        id: pd.id,
+        planId: pd.plan_id,
+        dayOfWeek: pd.day_of_week,
+        scheduledDate: pd.scheduled_date,
+        name: pd.name,
+        exercises: pd.exercises ?? [],
+        isSkipped: pd.is_skipped ?? false,
+        position: pd.position,
+      })),
+  }));
+
+  const setLogsData = setLogsRes.data ?? [];
+  const workoutLogs: FitnessWorkoutLog[] = (workoutLogsRes.data ?? []).map((row) => ({
+    id: row.id,
+    planDayId: row.plan_day_id,
+    routineId: row.routine_id,
+    name: row.name,
+    date: row.workout_date,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    notes: row.notes ?? '',
+    createdAt: row.created_at,
+    sets: setLogsData
+      .filter((sl) => sl.workout_log_id === row.id)
+      .map((sl) => ({
+        id: sl.id,
+        workoutLogId: sl.workout_log_id,
+        exerciseId: sl.exercise_id,
+        setNumber: sl.set_number,
+        reps: sl.reps,
+        weight: sl.weight == null ? null : Number(sl.weight),
+        completed: sl.completed ?? true,
+        isPr: sl.is_pr ?? false,
+      })),
+  }));
+
+  const weeklyCheckins: FitnessWeeklyCheckin[] = (checkinsRes.data ?? []).map((row) => ({
+    id: row.id,
+    weekStartDate: row.week_start_date,
+    workoutsCompleted: row.workouts_completed,
+    workoutsPlanned: row.workouts_planned,
+    energy: row.energy,
+    sleep: row.sleep,
+    hunger: row.hunger,
+    soreness: row.soreness,
+    weight: row.weight == null ? null : Number(row.weight),
+    adjustments: row.adjustments ?? [],
+    createdAt: row.created_at,
+  }));
+
+  return {
+    fitnessSchemaAvailable: true,
+    profile,
+    customExercises,
+    routines,
+    plans,
+    workoutLogs,
+    weeklyCheckins,
+  };
+}
+
+export async function saveFitnessProfile(profile: FitnessProfile) {
+  const client = requireSupabase();
+  const user_id = await currentUserId();
+  const { error } = await client.from('fitness_profiles').upsert({
+    user_id,
+    goal_mode: profile.goalMode,
+    experience: profile.experience,
+    training_days_per_week: profile.trainingDaysPerWeek,
+    equipment: profile.equipment,
+    units: profile.units,
+    confirmed_18_or_older: profile.confirmed18OrOlder,
+    hide_weight: profile.hideWeight,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' });
+  if (error) {
+    if (['PGRST205', '42P01'].includes(error.code)) return;
+    throw error;
+  }
+}
+
+export async function createCustomExercise(exercise: CustomExercise) {
+  const prefixedId = prefixCustomExerciseId(exercise.id);
+  await insert('custom_exercises', {
+    id: prefixedId,
+    name: exercise.name.slice(0, 100),
+    muscle_group: exercise.muscleGroup,
+    equipment: exercise.equipment,
+    is_bodyweight: exercise.isBodyweight,
+    form_cues: (exercise.formCues ?? []).slice(0, 10),
+    substitutes: (exercise.substitutes ?? []).slice(0, 10),
+    created_at: exercise.createdAt,
+  });
+}
+
+export async function deleteCustomExercise(id: string) {
+  await remove('custom_exercises', id);
+}
+
+export async function saveFitnessRoutine(routine: FitnessRoutine) {
+  const client = requireSupabase();
+  const user_id = await currentUserId();
+  const { error: routineError } = await client.from('fitness_routines').upsert({
+    user_id,
+    id: routine.id,
+    name: routine.name.slice(0, 100),
+    notes: (routine.notes ?? '').slice(0, 2000),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,id' });
+  if (routineError) {
+    if (['PGRST205', '42P01'].includes(routineError.code)) return;
+    throw routineError;
+  }
+
+  await client.from('fitness_routine_exercises').delete().eq('user_id', user_id).eq('routine_id', routine.id);
+  if (routine.exercises.length) {
+    const rows = routine.exercises.map((item, index) => ({
+      user_id,
+      id: item.id || generateId(),
+      routine_id: routine.id,
+      exercise_id: item.exerciseId,
+      target_sets: item.targetSets,
+      min_reps: item.minReps,
+      max_reps: item.maxReps,
+      target_weight: item.targetWeight ?? null,
+      position: index,
+    }));
+    const { error: exError } = await client.from('fitness_routine_exercises').insert(rows);
+    if (exError) throw exError;
+  }
+}
+
+export async function deleteFitnessRoutine(id: string) {
+  await remove('fitness_routines', id);
+}
+
+export async function saveFitnessPlan(plan: FitnessPlan) {
+  const client = requireSupabase();
+  const user_id = await currentUserId();
+  const { error: planError } = await client.from('fitness_plans').upsert({
+    user_id,
+    id: plan.id,
+    week_start_date: plan.weekStartDate,
+    goal_mode: plan.goalMode,
+    notes: (plan.notes ?? '').slice(0, 2000),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,week_start_date' });
+  if (planError) {
+    if (['PGRST205', '42P01'].includes(planError.code)) return;
+    throw planError;
+  }
+
+  await client.from('fitness_plan_days').delete().eq('user_id', user_id).eq('plan_id', plan.id);
+  if (plan.days.length) {
+    const rows = plan.days.map((day, index) => ({
+      user_id,
+      id: day.id || generateId(),
+      plan_id: plan.id,
+      day_of_week: day.dayOfWeek,
+      scheduled_date: day.scheduledDate,
+      name: day.name.slice(0, 100),
+      exercises: Array.isArray(day.exercises) ? day.exercises : [],
+      is_skipped: day.isSkipped,
+      position: index,
+    }));
+    const { error: daysError } = await client.from('fitness_plan_days').insert(rows);
+    if (daysError) throw daysError;
+  }
+}
+
+export async function updateFitnessPlanDay(id: string, values: Partial<FitnessPlanDay>) {
+  const row: Row = {};
+  if (values.name !== undefined) row.name = values.name.slice(0, 100);
+  if (values.scheduledDate !== undefined) row.scheduled_date = values.scheduledDate;
+  if (values.isSkipped !== undefined) row.is_skipped = values.isSkipped;
+  if (values.exercises !== undefined) row.exercises = values.exercises;
+  if (values.position !== undefined) row.position = values.position;
+  if (Object.keys(row).length) await update('fitness_plan_days', id, row);
+}
+
+export async function saveFitnessWorkoutLog(log: FitnessWorkoutLog) {
+  const client = requireSupabase();
+  const user_id = await currentUserId();
+  const { error: logError } = await client.from('fitness_workout_logs').upsert({
+    user_id,
+    id: log.id,
+    plan_day_id: log.planDayId ?? null,
+    routine_id: log.routineId ?? null,
+    name: log.name.slice(0, 100),
+    workout_date: log.date,
+    started_at: log.startedAt ?? null,
+    completed_at: log.completedAt ?? null,
+    notes: (log.notes ?? '').slice(0, 2000),
+  }, { onConflict: 'user_id,id' });
+  if (logError) {
+    if (['PGRST205', '42P01'].includes(logError.code)) return;
+    throw logError;
+  }
+
+  await client.from('fitness_set_logs').delete().eq('user_id', user_id).eq('workout_log_id', log.id);
+  if (log.sets.length) {
+    const rows = log.sets.map((set) => ({
+      user_id,
+      id: set.id || generateId(),
+      workout_log_id: log.id,
+      exercise_id: set.exerciseId,
+      set_number: set.setNumber,
+      reps: set.reps,
+      weight: set.weight,
+      completed: set.completed,
+      is_pr: set.isPr,
+    }));
+    const { error: setsError } = await client.from('fitness_set_logs').insert(rows);
+    if (setsError) throw setsError;
+  }
+}
+
+export async function deleteFitnessWorkoutLog(id: string) {
+  await remove('fitness_workout_logs', id);
+}
+
+export async function saveFitnessWeeklyCheckin(checkin: FitnessWeeklyCheckin) {
+  const client = requireSupabase();
+  const user_id = await currentUserId();
+  const { error } = await client.from('fitness_weekly_checkins').upsert({
+    user_id,
+    id: checkin.id,
+    week_start_date: checkin.weekStartDate,
+    workouts_completed: checkin.workoutsCompleted,
+    workouts_planned: checkin.workoutsPlanned,
+    energy: checkin.energy,
+    sleep: checkin.sleep,
+    hunger: checkin.hunger,
+    soreness: checkin.soreness,
+    weight: checkin.weight,
+    adjustments: Array.isArray(checkin.adjustments) ? checkin.adjustments : [],
+  }, { onConflict: 'user_id,week_start_date' });
+  if (error) {
+    if (['PGRST205', '42P01'].includes(error.code)) return;
+    throw error;
+  }
 }
 export async function createTransaction(transaction: Transaction) {
   const row: Row = { id: transaction.id, type: transaction.type, amount: roundMoney(transaction.amount), category: transaction.category, description: transaction.description, transaction_date: transaction.date };

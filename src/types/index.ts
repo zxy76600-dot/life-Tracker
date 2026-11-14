@@ -273,3 +273,135 @@ export const EXPENSE_CATEGORIES = [
 export const INCOME_CATEGORIES = [
   'Salary', 'Freelance', 'Investment', 'Gift', 'Other'
 ] as const;
+
+// ========================================
+// Upgraded Fitness Types (Phase 1)
+// ========================================
+
+export type FitnessGoalMode = 'basic' | 'bulk' | 'cut' | 'custom';
+export type FitnessExperience = 'beginner' | 'intermediate';
+export type FitnessEquipment = 'gym' | 'dumbbells' | 'bodyweight';
+export type FitnessUnit = 'kg' | 'lb';
+export type MuscleGroup = 'chest' | 'back' | 'shoulders' | 'legs' | 'arms' | 'core' | 'full_body';
+
+export interface FitnessProfile {
+  goalMode: FitnessGoalMode;
+  experience: FitnessExperience;
+  trainingDaysPerWeek: number;
+  equipment: FitnessEquipment;
+  units: FitnessUnit;
+  confirmed18OrOlder: boolean;
+  hideWeight: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Exercise {
+  id: string;
+  name: string;
+  muscleGroup: MuscleGroup;
+  equipment: FitnessEquipment;
+  isBodyweight: boolean;
+  formCues: string[];
+  substitutes: string[];
+}
+
+export interface CustomExercise extends Exercise {
+  createdAt: string;
+}
+
+export interface FitnessRoutineExercise {
+  id: string;
+  routineId: string;
+  exerciseId: string;
+  targetSets: number;
+  minReps: number;
+  maxReps: number;
+  targetWeight?: number | null;
+  position: number;
+}
+
+export interface FitnessRoutine {
+  id: string;
+  name: string;
+  notes: string;
+  exercises: FitnessRoutineExercise[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FitnessPlanDayExercise {
+  exerciseId: string;
+  targetSets: number;
+  minReps: number;
+  maxReps: number;
+  targetWeight?: number | null;
+}
+
+export interface FitnessPlanDay {
+  id: string;
+  planId: string;
+  dayOfWeek: number;
+  scheduledDate: string;
+  name: string;
+  exercises: FitnessPlanDayExercise[];
+  isSkipped: boolean;
+  position: number;
+}
+
+export interface FitnessPlan {
+  id: string;
+  weekStartDate: string;
+  goalMode: FitnessGoalMode;
+  notes: string;
+  days: FitnessPlanDay[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FitnessSetLog {
+  id: string;
+  workoutLogId: string;
+  exerciseId: string;
+  setNumber: number;
+  reps: number;
+  weight: number | null;
+  completed: boolean;
+  isPr: boolean;
+}
+
+export interface FitnessWorkoutLog {
+  id: string;
+  planDayId?: string | null;
+  routineId?: string | null;
+  name: string;
+  date: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  notes: string;
+  sets: FitnessSetLog[];
+  createdAt: string;
+}
+
+export interface WeeklyCheckinAdjustment {
+  exerciseId: string;
+  exerciseName: string;
+  action: 'increase' | 'hold' | 'decrease' | 'deload';
+  weightChange?: number;
+  reason: string;
+}
+
+export interface FitnessWeeklyCheckin {
+  id: string;
+  weekStartDate: string;
+  workoutsCompleted: number;
+  workoutsPlanned: number;
+  energy: number;
+  sleep: number;
+  hunger: number;
+  soreness: number;
+  weight: number | null;
+  adjustments: WeeklyCheckinAdjustment[];
+  createdAt: string;
+}
+

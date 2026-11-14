@@ -1,0 +1,573 @@
+import type { CustomExercise, Exercise, FitnessEquipment, MuscleGroup } from '../types';
+
+/**
+ * Built-in Exercise Library (~56 text-only exercises)
+ * Fully rep-based (no timed holds/planks).
+ * Categorized by muscle group, equipment, and form cues.
+ */
+export const BUILT_IN_EXERCISES: readonly Exercise[] = [
+  // CHEST
+  {
+    id: 'barbell-bench-press',
+    name: 'Barbell Bench Press',
+    muscleGroup: 'chest',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Plant your feet flat on the floor and keep shoulder blades retracted.', 'Lower the bar with control to your mid-chest, then press upward.'],
+    substitutes: ['dumbbell-bench-press', 'push-up'],
+  },
+  {
+    id: 'dumbbell-bench-press',
+    name: 'Dumbbell Bench Press',
+    muscleGroup: 'chest',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Keep your wrists stacked directly above your elbows.', 'Press up and slightly inward without clanging the dumbbells together.'],
+    substitutes: ['barbell-bench-press', 'push-up'],
+  },
+  {
+    id: 'push-up',
+    name: 'Push-Up',
+    muscleGroup: 'chest',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Brace your core and maintain a straight line from heels to head.', 'Lower until chest is roughly an inch off the floor, keeping elbows at 45 degrees.'],
+    substitutes: ['dumbbell-bench-press', 'barbell-bench-press'],
+  },
+  {
+    id: 'incline-barbell-bench-press',
+    name: 'Incline Barbell Bench Press',
+    muscleGroup: 'chest',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Set bench angle to roughly 30 degrees.', 'Touch the bar gently to your upper chest before pressing up.'],
+    substitutes: ['incline-dumbbell-bench-press', 'incline-push-up'],
+  },
+  {
+    id: 'incline-dumbbell-bench-press',
+    name: 'Incline Dumbbell Bench Press',
+    muscleGroup: 'chest',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Drive through your feet and avoid flaring your elbows wide.', 'Lower slowly to upper chest depth.'],
+    substitutes: ['incline-barbell-bench-press', 'incline-push-up'],
+  },
+  {
+    id: 'incline-push-up',
+    name: 'Incline Push-Up',
+    muscleGroup: 'chest',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Place hands on a sturdy bench or elevated surface.', 'Maintain a rigid core throughout the entire rep.'],
+    substitutes: ['incline-dumbbell-bench-press', 'push-up'],
+  },
+  {
+    id: 'chest-dip',
+    name: 'Chest Dip',
+    muscleGroup: 'chest',
+    equipment: 'gym',
+    isBodyweight: true,
+    formCues: ['Lean your torso forward slightly to emphasize chest over triceps.', 'Lower under control until upper arms are parallel to floor.'],
+    substitutes: ['dumbbell-floor-press', 'push-up'],
+  },
+  {
+    id: 'dumbbell-floor-press',
+    name: 'Dumbbell Floor Press',
+    muscleGroup: 'chest',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Lie flat on the floor with knees bent and feet planted.', 'Lower until triceps lightly touch the floor, pause briefly, then press.'],
+    substitutes: ['dumbbell-bench-press', 'push-up'],
+  },
+  {
+    id: 'cable-chest-flye',
+    name: 'Cable Chest Flye',
+    muscleGroup: 'chest',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Maintain a slight bend in your elbows throughout the movement.', 'Squeeze chest muscles together at the peak contraction.'],
+    substitutes: ['dumbbell-flye', 'wide-grip-push-up'],
+  },
+  {
+    id: 'dumbbell-flye',
+    name: 'Dumbbell Flye',
+    muscleGroup: 'chest',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Hug a wide barrel with soft elbows.', 'Lower only to a comfortable chest stretch without hyperextending.'],
+    substitutes: ['cable-chest-flye', 'wide-grip-push-up'],
+  },
+  {
+    id: 'wide-grip-push-up',
+    name: 'Wide-Grip Push-Up',
+    muscleGroup: 'chest',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Place hands wider than shoulder width.', 'Keep glutes squeezed and spine neutral.'],
+    substitutes: ['dumbbell-flye', 'push-up'],
+  },
+
+  // BACK
+  {
+    id: 'barbell-deadlift',
+    name: 'Barbell Conventional Deadlift',
+    muscleGroup: 'back',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Keep the bar close to your shins and engage lats before pulling.', 'Drive floor away with your legs and lock out hips tall.'],
+    substitutes: ['dumbbell-romanian-deadlift', 'single-leg-bodyweight-deadlift'],
+  },
+  {
+    id: 'barbell-bent-over-row',
+    name: 'Barbell Bent-Over Row',
+    muscleGroup: 'back',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Hinge at hips with a flat back at roughly 45 degrees.', 'Pull bar towards your belly button, driving elbows back.'],
+    substitutes: ['dumbbell-bent-over-row', 'inverted-row'],
+  },
+  {
+    id: 'dumbbell-bent-over-row',
+    name: 'Dumbbell Bent-Over Row',
+    muscleGroup: 'back',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Maintain a solid hip hinge with braced abs.', 'Pull dumbbells to waist level, squeezing shoulder blades together.'],
+    substitutes: ['barbell-bent-over-row', 'inverted-row'],
+  },
+  {
+    id: 'inverted-row',
+    name: 'Inverted Row',
+    muscleGroup: 'back',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Position body under a low bar or table edge, keeping heels on floor.', 'Pull chest up to touch the bar while maintaining a straight body line.'],
+    substitutes: ['dumbbell-bent-over-row', 'pull-up'],
+  },
+  {
+    id: 'pull-up',
+    name: 'Pull-Up',
+    muscleGroup: 'back',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Overhand grip slightly wider than shoulders.', 'Pull chest toward bar until chin clears, avoiding excessive swinging.'],
+    substitutes: ['lat-pulldown', 'inverted-row'],
+  },
+  {
+    id: 'chin-up',
+    name: 'Chin-Up',
+    muscleGroup: 'back',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Underhand grip shoulder-width apart.', 'Drive elbows down and back, engaging both lats and biceps.'],
+    substitutes: ['lat-pulldown', 'dumbbell-bent-over-row'],
+  },
+  {
+    id: 'lat-pulldown',
+    name: 'Lat Pulldown',
+    muscleGroup: 'back',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Lean back very slightly and pull bar toward upper collarbone.', 'Control the weight all the way back to full arm extension.'],
+    substitutes: ['pull-up', 'dumbbell-bent-over-row'],
+  },
+  {
+    id: 'seated-cable-row',
+    name: 'Seated Cable Row',
+    muscleGroup: 'back',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Sit upright without rocking your lower back back and forth.', 'Pull attachment into stomach and pause for a brief squeeze.'],
+    substitutes: ['dumbbell-bent-over-row', 'inverted-row'],
+  },
+  {
+    id: 'dumbbell-single-arm-row',
+    name: 'Single-Arm Dumbbell Row',
+    muscleGroup: 'back',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Support non-working knee and hand on a flat bench.', 'Pull dumbbell back toward hip, avoiding torso twisting.'],
+    substitutes: ['seated-cable-row', 'inverted-row'],
+  },
+  {
+    id: 'dumbbell-pullover',
+    name: 'Dumbbell Pullover',
+    muscleGroup: 'back',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Hold one dumbbell overhead across bench with soft elbows.', 'Lower behind head until lats stretch comfortably, then pull back over chest.'],
+    substitutes: ['lat-pulldown', 'inverted-row'],
+  },
+
+  // LEGS
+  {
+    id: 'barbell-back-squat',
+    name: 'Barbell Back Squat',
+    muscleGroup: 'legs',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Set feet shoulder-width with toes slightly pointed out.', 'Break at hips and knees together, squatting to at least parallel.'],
+    substitutes: ['dumbbell-goblet-squat', 'bodyweight-squat'],
+  },
+  {
+    id: 'barbell-front-squat',
+    name: 'Barbell Front Squat',
+    muscleGroup: 'legs',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Rest bar across front deltoids with high elbows.', 'Keep torso upright as you descend smoothly.'],
+    substitutes: ['dumbbell-goblet-squat', 'bodyweight-squat'],
+  },
+  {
+    id: 'dumbbell-goblet-squat',
+    name: 'Dumbbell Goblet Squat',
+    muscleGroup: 'legs',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Hold dumbbell vertically against your upper chest.', 'Sit back and down between knees, keeping your chest tall.'],
+    substitutes: ['barbell-back-squat', 'bodyweight-squat'],
+  },
+  {
+    id: 'bodyweight-squat',
+    name: 'Bodyweight Air Squat',
+    muscleGroup: 'legs',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Extend arms forward for balance as you sit into hips.', 'Keep weight distributed across whole foot, knees tracking toes.'],
+    substitutes: ['dumbbell-goblet-squat', 'barbell-back-squat'],
+  },
+  {
+    id: 'bulgarian-split-squat-dumbbell',
+    name: 'Bulgarian Split Squat (Dumbbells)',
+    muscleGroup: 'legs',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Elevate rear foot on a bench behind you.', 'Lower front thigh until parallel to ground, keeping lead heel firmly planted.'],
+    substitutes: ['bulgarian-split-squat-bodyweight', 'dumbbell-goblet-squat'],
+  },
+  {
+    id: 'bulgarian-split-squat-bodyweight',
+    name: 'Bulgarian Split Squat (Bodyweight)',
+    muscleGroup: 'legs',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Elevate rear foot on a chair or step.', 'Descend smoothly, keeping torso tall and weight on front leg.'],
+    substitutes: ['bulgarian-split-squat-dumbbell', 'bodyweight-squat'],
+  },
+  {
+    id: 'barbell-romanian-deadlift',
+    name: 'Barbell Romanian Deadlift (RDL)',
+    muscleGroup: 'legs',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Soft knees throughout; hinge backwards at your hips.', 'Lower bar just past knees until hamstrings are fully stretched.'],
+    substitutes: ['dumbbell-romanian-deadlift', 'single-leg-bodyweight-deadlift'],
+  },
+  {
+    id: 'dumbbell-romanian-deadlift',
+    name: 'Dumbbell Romanian Deadlift (RDL)',
+    muscleGroup: 'legs',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Push hips straight back while keeping dumbbells skimming shins.', 'Squeeze glutes to stand tall without arching lower back.'],
+    substitutes: ['barbell-romanian-deadlift', 'single-leg-bodyweight-deadlift'],
+  },
+  {
+    id: 'single-leg-bodyweight-deadlift',
+    name: 'Single-Leg Bodyweight Deadlift',
+    muscleGroup: 'legs',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Hinge at hip on standing leg while extending rear leg straight back.', 'Keep hips square to the ground as you reach down.'],
+    substitutes: ['dumbbell-romanian-deadlift', 'glute-bridge'],
+  },
+  {
+    id: 'barbell-hip-thrust',
+    name: 'Barbell Hip Thrust',
+    muscleGroup: 'legs',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Upper back anchored across bench, bar padded across hip crease.', 'Drive through heels to full hip extension, ribs kept down.'],
+    substitutes: ['dumbbell-glute-bridge', 'glute-bridge'],
+  },
+  {
+    id: 'dumbbell-glute-bridge',
+    name: 'Dumbbell Glute Bridge',
+    muscleGroup: 'legs',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Lie on floor with dumbbell resting comfortably on hips.', 'Drive hips up until thighs and torso align, squeezing glutes for 1 sec.'],
+    substitutes: ['barbell-hip-thrust', 'glute-bridge'],
+  },
+  {
+    id: 'glute-bridge',
+    name: 'Bodyweight Glute Bridge',
+    muscleGroup: 'legs',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Feet flat, shoulder-width apart, knees bent at 90 degrees.', 'Lift hips with glute strength, avoiding hyper-arching lower back.'],
+    substitutes: ['dumbbell-glute-bridge', 'barbell-hip-thrust'],
+  },
+  {
+    id: 'leg-press',
+    name: 'Leg Press',
+    muscleGroup: 'legs',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Place feet mid-platform shoulder width.', 'Lower sled smoothly without allowing tailbone to lift off pad.'],
+    substitutes: ['dumbbell-goblet-squat', 'bodyweight-squat'],
+  },
+  {
+    id: 'lying-leg-curl',
+    name: 'Lying Leg Curl',
+    muscleGroup: 'legs',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Keep hips pressed firmly against pad as you curl heels.', 'Lower weight slowly back to straight legs.'],
+    substitutes: ['dumbbell-romanian-deadlift', 'glute-bridge'],
+  },
+  {
+    id: 'standing-calf-raise-dumbbell',
+    name: 'Standing Calf Raise (Dumbbells)',
+    muscleGroup: 'legs',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Balls of feet on edge of step holding dumbbells at sides.', 'Press high onto toes, pause, then lower for full heel stretch.'],
+    substitutes: ['standing-calf-raise-bodyweight', 'leg-press'],
+  },
+  {
+    id: 'standing-calf-raise-bodyweight',
+    name: 'Standing Calf Raise (Bodyweight)',
+    muscleGroup: 'legs',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Stand on edge of a step, holding a wall for balance.', 'Rise high onto big toes, pause for 1 second, then stretch down.'],
+    substitutes: ['standing-calf-raise-dumbbell', 'bodyweight-squat'],
+  },
+
+  // SHOULDERS
+  {
+    id: 'overhead-barbell-press',
+    name: 'Overhead Barbell Press',
+    muscleGroup: 'shoulders',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Brace glutes and abs to avoid leaning back.', 'Press bar vertically overhead, locking out directly above crown.'],
+    substitutes: ['overhead-dumbbell-press', 'pike-push-up'],
+  },
+  {
+    id: 'overhead-dumbbell-press',
+    name: 'Overhead Dumbbell Press',
+    muscleGroup: 'shoulders',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Hold dumbbells at ear height with elbows slightly in front.', 'Press upward in a natural arc without arching lower back.'],
+    substitutes: ['overhead-barbell-press', 'pike-push-up'],
+  },
+  {
+    id: 'pike-push-up',
+    name: 'Pike Push-Up',
+    muscleGroup: 'shoulders',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Form an inverted V-shape by hiking hips up high.', 'Lower head forward towards floor, then press back up through shoulders.'],
+    substitutes: ['overhead-dumbbell-press', 'overhead-barbell-press'],
+  },
+  {
+    id: 'dumbbell-lateral-raise',
+    name: 'Dumbbell Lateral Raise',
+    muscleGroup: 'shoulders',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Lead with elbows and keep a slight forward lean.', 'Raise to parallel with floor, avoiding using momentum or shrugging.'],
+    substitutes: ['cable-lateral-raise', 'pike-push-up'],
+  },
+  {
+    id: 'cable-lateral-raise',
+    name: 'Cable Lateral Raise',
+    muscleGroup: 'shoulders',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Set pulley at hip or ankle height.', 'Sweep arm out and up smoothly, pausing at shoulder height.'],
+    substitutes: ['dumbbell-lateral-raise', 'pike-push-up'],
+  },
+  {
+    id: 'face-pull',
+    name: 'Cable Face Pull',
+    muscleGroup: 'shoulders',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Pull rope toward eye level, rotating hands outward.', 'Squeeze rear delts and upper back at peak contraction.'],
+    substitutes: ['dumbbell-rear-delt-flye', 'reverse-snow-angel'],
+  },
+  {
+    id: 'dumbbell-rear-delt-flye',
+    name: 'Dumbbell Rear Delt Flye',
+    muscleGroup: 'shoulders',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Hinge forward until torso is near parallel with floor.', 'Raise arms out to sides with slight elbow bend, pinching back of shoulders.'],
+    substitutes: ['face-pull', 'reverse-snow-angel'],
+  },
+  {
+    id: 'reverse-snow-angel',
+    name: 'Prone Reverse Snow Angel',
+    muscleGroup: 'shoulders',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Lie face down on floor with arms extended overhead.', 'Lift hands slightly and sweep arms in a wide arc down to your hips.'],
+    substitutes: ['dumbbell-rear-delt-flye', 'face-pull'],
+  },
+
+  // ARMS
+  {
+    id: 'barbell-bicep-curl',
+    name: 'Barbell Bicep Curl',
+    muscleGroup: 'arms',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Keep elbows tucked against sides; avoid swinging hips.', 'Curl bar up to chest height and lower with control.'],
+    substitutes: ['dumbbell-bicep-curl', 'chin-up'],
+  },
+  {
+    id: 'dumbbell-bicep-curl',
+    name: 'Dumbbell Bicep Curl',
+    muscleGroup: 'arms',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Supinate wrists as you curl dumbbells upward.', 'Control the eccentric lowering phase for 2 seconds.'],
+    substitutes: ['barbell-bicep-curl', 'chin-up'],
+  },
+  {
+    id: 'dumbbell-hammer-curl',
+    name: 'Dumbbell Hammer Curl',
+    muscleGroup: 'arms',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Palms face each other throughout the curl.', 'Target forearms and brachialis by keeping elbows locked in place.'],
+    substitutes: ['dumbbell-bicep-curl', 'chin-up'],
+  },
+  {
+    id: 'triceps-rope-pushdown',
+    name: 'Cable Triceps Rope Pushdown',
+    muscleGroup: 'arms',
+    equipment: 'gym',
+    isBodyweight: false,
+    formCues: ['Pin elbows to ribs throughout the motion.', 'Push downward and spread the rope ends slightly at the bottom.'],
+    substitutes: ['overhead-dumbbell-triceps-extension', 'bench-dip'],
+  },
+  {
+    id: 'overhead-dumbbell-triceps-extension',
+    name: 'Overhead Dumbbell Triceps Extension',
+    muscleGroup: 'arms',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Hold dumbbell with both hands overhead, elbows pointing up.', 'Bend elbows to lower weight behind head, then press back to lockout.'],
+    substitutes: ['triceps-rope-pushdown', 'bench-dip'],
+  },
+  {
+    id: 'bench-dip',
+    name: 'Bench Dip',
+    muscleGroup: 'arms',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Hands on bench behind you, fingers forward, legs extended.', 'Lower hips until elbows hit 90 degrees, then press through palms.'],
+    substitutes: ['overhead-dumbbell-triceps-extension', 'triceps-rope-pushdown'],
+  },
+
+  // CORE (Purely Rep-Based — No Planks or Timers)
+  {
+    id: 'dead-bug',
+    name: 'Dead Bug',
+    muscleGroup: 'core',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Press lower back flush against floor; knees and hips at 90 degrees.', 'Extend opposite arm and leg simultaneously without arching back.'],
+    substitutes: ['lying-leg-raise', 'bird-dog'],
+  },
+  {
+    id: 'lying-leg-raise',
+    name: 'Lying Leg Raise',
+    muscleGroup: 'core',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Hands under hips to support lower back.', 'Raise straight legs to 90 degrees, then lower slowly without touching the floor.'],
+    substitutes: ['hanging-knee-raise', 'dead-bug'],
+  },
+  {
+    id: 'hanging-knee-raise',
+    name: 'Hanging Knee Raise',
+    muscleGroup: 'core',
+    equipment: 'gym',
+    isBodyweight: true,
+    formCues: ['Hang from pull-up bar with shoulders packed.', 'Curl knees up to chest height using abs, minimizing momentum.'],
+    substitutes: ['lying-leg-raise', 'dead-bug'],
+  },
+  {
+    id: 'bird-dog',
+    name: 'Bird Dog',
+    muscleGroup: 'core',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Start on hands and knees with flat back.', 'Reach opposite arm forward and leg back, pausing 1 second at full extension.'],
+    substitutes: ['dead-bug', 'lying-leg-raise'],
+  },
+  {
+    id: 'russian-twist-weighted',
+    name: 'Russian Twist (Weighted)',
+    muscleGroup: 'core',
+    equipment: 'dumbbells',
+    isBodyweight: false,
+    formCues: ['Sit with knees bent, torso reclined 45 degrees, holding dumbbell.', 'Rotate shoulders from side to side with deliberate control.'],
+    substitutes: ['dead-bug', 'bird-dog'],
+  },
+  {
+    id: 'russian-twist-bodyweight',
+    name: 'Russian Twist (Bodyweight)',
+    muscleGroup: 'core',
+    equipment: 'bodyweight',
+    isBodyweight: true,
+    formCues: ['Sit with heels lightly touching floor and torso leaned back.', 'Tap hands to the floor beside each hip in an alternating tempo.'],
+    substitutes: ['dead-bug', 'bird-dog'],
+  },
+] as const;
+
+/**
+ * Look up an exercise by ID across built-in and user-created custom exercises.
+ */
+export function getExerciseById(id: string, customExercises: readonly CustomExercise[] = []): Exercise | undefined {
+  if (id.startsWith('custom:')) {
+    return customExercises.find((ex) => ex.id === id);
+  }
+  return BUILT_IN_EXERCISES.find((ex) => ex.id === id) || customExercises.find((ex) => ex.id === id);
+}
+
+/**
+ * Combine built-in exercises with user-created custom exercises.
+ */
+export function getAllExercises(customExercises: readonly CustomExercise[] = []): Exercise[] {
+  return [...BUILT_IN_EXERCISES, ...customExercises];
+}
+
+/**
+ * Filter exercises by search text, muscle group, and equipment.
+ */
+export function filterExercises(
+  exercises: readonly Exercise[],
+  query: string,
+  muscleGroup?: MuscleGroup | 'all',
+  equipment?: FitnessEquipment | 'all',
+): Exercise[] {
+  const cleanQuery = query.trim().toLowerCase();
+  return exercises.filter((ex) => {
+    if (muscleGroup && muscleGroup !== 'all' && ex.muscleGroup !== muscleGroup) return false;
+    if (equipment && equipment !== 'all' && ex.equipment !== equipment) return false;
+    if (!cleanQuery) return true;
+    return (
+      ex.name.toLowerCase().includes(cleanQuery) ||
+      ex.muscleGroup.toLowerCase().includes(cleanQuery) ||
+      ex.equipment.toLowerCase().includes(cleanQuery) ||
+      ex.formCues.some((cue) => cue.toLowerCase().includes(cleanQuery))
+    );
+  });
+}

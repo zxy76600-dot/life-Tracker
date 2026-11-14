@@ -164,6 +164,103 @@ export interface Transaction {
   category: string;
   description: string;
   date: string;          // ISO date string
+  walletId?: string | null;
+  recurringSeriesId?: string | null;
+  splitTotalAmount?: number | null;
+}
+
+export type FinanceCurrency = 'INR' | 'NPR' | 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'JPY' | 'SGD' | 'NZD' | 'CHF' | 'CNY' | 'AED' | 'BDT' | 'PKR' | 'ZAR';
+export type FinanceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+export type LoanDirection = 'lent' | 'borrowed';
+
+export interface Wallet {
+  id: string;
+  name: string;
+  openingBalance: number;
+  archivedAt: string | null;
+  createdAt: string;
+}
+
+export interface WalletTransfer {
+  id: string;
+  fromWalletId: string;
+  toWalletId: string;
+  amount: number;
+  date: string;
+  note: string;
+}
+
+export interface Loan {
+  id: string;
+  direction: LoanDirection;
+  person: string;
+  amount: number;
+  date: string;
+  dueDate: string | null;
+  note: string;
+  walletId: string | null;
+  linkedTransactionId: string | null;
+  createdAt: string;
+}
+
+export interface LoanPayment {
+  id: string;
+  loanId: string;
+  walletId: string | null;
+  amount: number;
+  date: string;
+  note: string;
+}
+
+export interface FinanceBudget {
+  id: string;
+  monthStart: string;
+  category: string;
+  amount: number;
+}
+
+export interface FinanceKeywordRule {
+  id: string;
+  keyword: string;
+  category: string;
+  type: 'income' | 'expense';
+}
+
+export interface FinanceSettings {
+  currency: FinanceCurrency;
+  overallMonthlyBudget: number | null;
+  keywordRules: FinanceKeywordRule[];
+}
+
+export interface RecurringTransactionSeries {
+  id: string;
+  type: 'income' | 'expense';
+  amount: number;
+  category: string;
+  description: string;
+  walletId: string | null;
+  frequency: FinanceFrequency;
+  startsOn: string;
+  endsOn: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  targetDate: string | null;
+  createdAt: string;
+}
+
+export interface SavingsContribution {
+  id: string;
+  goalId: string;
+  walletId: string;
+  amount: number;
+  date: string;
+  note: string;
 }
 
 /** Predefined expense categories for the finance tracker */

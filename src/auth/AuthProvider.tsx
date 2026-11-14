@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { AuthContext, type AuthContextValue } from './authContext';
-import { ensureRecurringTodoWindow, fetchTrackerData } from '../lib/cloudData';
+import { ensureRecurringFinanceWindow, ensureRecurringTodoWindow, fetchTrackerData } from '../lib/cloudData';
 import { isSupabaseConfigured, requireSupabase } from '../lib/supabase';
 import { reportCloudError } from '../lib/cloudFeedback';
 import { useHabitStore } from '../stores/habitStore';
@@ -16,7 +16,7 @@ function clearTrackerState() {
   useGoalStore.setState({ goals: [] });
   useMoodStore.setState({ entries: [] });
   useFitnessStore.setState({ workouts: [], dailyHealth: [] });
-  useFinanceStore.setState({ transactions: [] });
+  useFinanceStore.setState({ transactions: [], wallets: [], transfers: [], loans: [], loanPayments: [], budgets: [], financeSettings: { currency: 'INR' as const, overallMonthlyBudget: null, keywordRules: [] }, recurringTransactionSeries: [], savingsGoals: [], savingsContributions: [], financeSchemaAvailable: true });
   useTodoStore.setState({ todos: [], series: [], error: '' });
 }
 
@@ -25,7 +25,12 @@ function applyTrackerData(data: Awaited<ReturnType<typeof fetchTrackerData>>) {
   useGoalStore.setState({ goals: data.goals });
   useMoodStore.setState({ entries: data.entries });
   useFitnessStore.setState({ workouts: data.workouts, dailyHealth: data.dailyHealth });
-  useFinanceStore.setState({ transactions: data.transactions });
+  useFinanceStore.getState().setData({
+    transactions: data.transactions, wallets: data.wallets, transfers: data.transfers, loans: data.loans,
+    loanPayments: data.loanPayments, budgets: data.budgets, financeSettings: data.financeSettings,
+    recurringTransactionSeries: data.recurringTransactionSeries, savingsGoals: data.savingsGoals,
+    savingsContributions: data.savingsContributions, financeSchemaAvailable: data.financeSchemaAvailable,
+  });
   useTodoStore.getState().setData(data.todos, data.todoSeries);
 }
 
@@ -54,6 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTrackerState();
       try {
         const data = await fetchTrackerData();
+        if (data.financeSchemaAvailable) {
+          const generatedTransactions = await ensureRecurringFinanceWindow(data.recurringTransactionSeries, data.transactions);
+          data.transactions.push(...generatedTransactions);
+        }
         if (data.todoSeries.length) {
           const generatedTodos = await ensureRecurringTodoWindow(data.todoSeries, data.todos);
           data.todos.push(...generatedTodos);

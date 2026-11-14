@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   CheckSquare,
+  ListTodo,
   Target,
   Smile,
   Dumbbell,
@@ -15,6 +16,7 @@ const tabs = [
   { to: '/', icon: LayoutDashboard, label: 'Home' },
   { to: '/habits', icon: CheckSquare, label: 'Habits' },
   { to: '/goals', icon: Target, label: 'Goals' },
+  { to: '/todos', icon: ListTodo, label: 'To-Do' },
   { to: '/mood', icon: Smile, label: 'Mood' },
   { to: '/fitness', icon: Dumbbell, label: 'Fitness' },
   { to: '/finances', icon: Wallet, label: 'Money' },
@@ -30,7 +32,7 @@ export function MobileTabBar() {
             to={tab.to}
             end={tab.to === '/'}
             className={({ isActive }) =>
-              `flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
+              `flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-0.5 py-2 text-[9px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:px-1 sm:text-[10px]
               ${isActive ? 'bg-accent-soft font-semibold text-app-ink dark:bg-accent/15' : 'text-app-subtle hover:bg-app-muted hover:text-app-ink'}`
             }
           >

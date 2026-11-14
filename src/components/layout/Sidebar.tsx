@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   CheckSquare,
+  ListTodo,
   Target,
   Smile,
   Dumbbell,
@@ -26,6 +27,7 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/habits', icon: CheckSquare, label: 'Habits' },
   { to: '/goals', icon: Target, label: 'Goals' },
+  { to: '/todos', icon: ListTodo, label: 'To-Do' },
   { to: '/mood', icon: Smile, label: 'Mood Journal' },
   { to: '/fitness', icon: Dumbbell, label: 'Fitness' },
   { to: '/finances', icon: Wallet, label: 'Finances' },

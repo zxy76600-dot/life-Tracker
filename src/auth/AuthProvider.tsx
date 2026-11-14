@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { AuthContext, type AuthContextValue } from './authContext';
-import { fetchTrackerData } from '../lib/cloudData';
+import { ensureRecurringTodoWindow, fetchTrackerData } from '../lib/cloudData';
 import { isSupabaseConfigured, requireSupabase } from '../lib/supabase';
 import { reportCloudError } from '../lib/cloudFeedback';
 import { useHabitStore } from '../stores/habitStore';
@@ -9,6 +9,7 @@ import { useGoalStore } from '../stores/goalStore';
 import { useMoodStore } from '../stores/moodStore';
 import { useFitnessStore } from '../stores/fitnessStore';
 import { useFinanceStore } from '../stores/financeStore';
+import { useTodoStore } from '../stores/todoStore';
 
 function clearTrackerState() {
   useHabitStore.setState({ habits: [] });
@@ -16,6 +17,7 @@ function clearTrackerState() {
   useMoodStore.setState({ entries: [] });
   useFitnessStore.setState({ workouts: [], dailyHealth: [] });
   useFinanceStore.setState({ transactions: [] });
+  useTodoStore.setState({ todos: [], series: [], error: '' });
 }
 
 function applyTrackerData(data: Awaited<ReturnType<typeof fetchTrackerData>>) {
@@ -24,6 +26,7 @@ function applyTrackerData(data: Awaited<ReturnType<typeof fetchTrackerData>>) {
   useMoodStore.setState({ entries: data.entries });
   useFitnessStore.setState({ workouts: data.workouts, dailyHealth: data.dailyHealth });
   useFinanceStore.setState({ transactions: data.transactions });
+  useTodoStore.getState().setData(data.todos, data.todoSeries);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -51,6 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTrackerState();
       try {
         const data = await fetchTrackerData();
+        if (data.todoSeries.length) {
+          const generatedTodos = await ensureRecurringTodoWindow(data.todoSeries, data.todos);
+          data.todos.push(...generatedTodos);
+        }
         if (currentRequest === request) applyTrackerData(data);
         if (currentRequest === request) setError('');
       } catch (loadError) {

@@ -46,6 +46,54 @@ export interface Goal {
 export type GoalCategory = 'health' | 'career' | 'learning' | 'finance' | 'personal' | 'fitness';
 
 // ========================================
+// To-Do Types
+// ========================================
+
+export type TodoPriority = 'low' | 'medium' | 'high';
+export type TodoRecurrence = 'daily' | 'weekdays' | 'weekly' | 'monthly';
+
+export interface TodoSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
+  position: number;
+  createdAt: string;
+}
+
+export interface Todo {
+  id: string;
+  seriesId: string | null;
+  title: string;
+  notes: string;
+  date: string;
+  time: string | null;
+  priority: TodoPriority;
+  category: string | null;
+  position: number;
+  reminderEnabled: boolean;
+  createdAt: string;
+  completedAt: string | null;
+  subtasks: TodoSubtask[];
+}
+
+export interface TodoSeries {
+  id: string;
+  title: string;
+  notes: string;
+  time: string | null;
+  priority: TodoPriority;
+  category: string | null;
+  reminderEnabled: boolean;
+  recurrence: TodoRecurrence;
+  subtasks: string[];
+  weekdays: number[];
+  startsOn: string;
+  endsOn: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+// ========================================
 // Mood Types
 // ========================================
 

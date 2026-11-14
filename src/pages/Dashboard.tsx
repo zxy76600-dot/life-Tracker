@@ -1,4 +1,5 @@
 import { Card, Button } from '../components/ui';
+import { Link } from 'react-router-dom';
 import { useHabitStore } from '../stores/habitStore';
 import { useGoalStore } from '../stores/goalStore';
 import { useMoodStore } from '../stores/moodStore';
@@ -9,6 +10,7 @@ import { loadDemoData } from '../utils/demoData';
 import { reportCloudError } from '../lib/cloudFeedback';
 import {
   CheckSquare,
+  ListTodo,
   Target,
   Smile,
   Wallet,
@@ -29,6 +31,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
+import { useTodoStore } from '../stores/todoStore';
+import { getTodoDayStats } from '../utils/todoStats';
 
 /**
  * Dashboard — The home page with true black dark theme and crisp white light theme.
@@ -39,8 +43,11 @@ export default function Dashboard() {
   const { entries: moodEntries } = useMoodStore();
   const { getTodayHealth } = useFitnessStore();
   const { transactions } = useFinanceStore();
+  const { todos } = useTodoStore();
   const today = getTodayStr();
   const todayHealth = getTodayHealth();
+  const todayTodoStats = getTodoDayStats(todos, today);
+  const openTodosToday = todos.filter((todo) => todo.date === today && !todo.completedAt).length;
 
   // Calculate stats
   const habitsCompletedToday = habits.filter((h) =>
@@ -202,6 +209,16 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      <Link to="/todos" className="block rounded-card-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg">
+        <Card hover className="flex items-center justify-between gap-4 border-l-4 border-l-accent p-4 sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="rounded-xl bg-accent/10 p-2.5 text-accent"><ListTodo size={21} /></div>
+            <div className="min-w-0"><p className="text-sm font-semibold text-app-subtle">Today’s To-Dos</p><p className="mt-1 text-xl font-bold text-app-ink">{openTodosToday} open <span className="text-sm font-medium text-app-subtle">· {todayTodoStats.percent}% complete</span></p></div>
+          </div>
+          <span className="shrink-0 text-sm font-semibold text-app-ink">View tasks <span aria-hidden="true">→</span></span>
+        </Card>
+      </Link>
 
       {/* Charts Row */}
       <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">

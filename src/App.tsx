@@ -3,6 +3,7 @@ import { Layout } from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Habits from './pages/Habits';
 import Goals from './pages/Goals';
+import Todos from './pages/Todos';
 import MoodJournal from './pages/MoodJournal';
 import Fitness from './pages/Fitness';
 import Finances from './pages/Finances';
@@ -31,6 +32,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/habits" element={<Habits />} />
             <Route path="/goals" element={<Goals />} />
+            <Route path="/todos" element={<Todos />} />
             <Route path="/mood" element={<MoodJournal />} />
             <Route path="/fitness" element={<Fitness />} />
             <Route path="/finances" element={<Finances />} />

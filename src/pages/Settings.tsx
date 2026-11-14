@@ -15,7 +15,7 @@ export default function Settings() {
   const { theme, setTheme } = useThemeStore();
 
   const clearLegacyKeys = () => {
-    ['life-tracker-habits', 'life-tracker-goals', 'life-tracker-mood', 'life-tracker-fitness', 'life-tracker-finances'].forEach((key) => localStorage.removeItem(key));
+    ['life-tracker-habits', 'life-tracker-goals', 'life-tracker-mood', 'life-tracker-fitness', 'life-tracker-finances', 'life-tracker-todos'].forEach((key) => localStorage.removeItem(key));
   };
 
   const handleLoadDemo = async () => {

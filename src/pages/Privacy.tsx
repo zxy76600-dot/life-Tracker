@@ -12,6 +12,7 @@ export default function Privacy() {
         <Card>
           <div className="space-y-4 text-sm leading-6 text-app-subtle">
             <p>Life Tracker stores the information you enter: habits, goals, mood entries, workouts, sleep and water, fitness profile choices, workout and set logs, weekly check-ins, and optional body weight (which you can hide), wallets, transactions, loans, budgets and savings goals. It also stores your email address and basic Google profile information if you sign in with Google. Statement CSV files are processed in your browser and are not stored. You can export or delete fitness data in Settings.</p>
+            <p>Your display name and avatar color are stored with your account.</p>
             <p>Your data is stored with Supabase, and the website is hosted on Vercel. Your data is not sold or shared for advertising.</p>
             <p>In Settings, use <strong>Export Data (Backup)</strong> to export your data or <strong>Clear All Data</strong> to delete it.</p>
             <p>Questions? Contact <a className="font-medium text-app-ink underline underline-offset-2" href="mailto:Zxy76600@gmail.com">Zxy76600@gmail.com</a>.</p>

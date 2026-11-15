@@ -912,6 +912,35 @@ export async function clearCloudData() {
   }
 }
 
+export type ClearableTrackerModule = 'habits' | 'goals' | 'mood' | 'fitness' | 'todo' | 'finance';
+
+/** Delete one tracker's rows using the same child-before-parent order as clearCloudData. */
+export async function clearCloudModuleData(module: ClearableTrackerModule) {
+  const client = requireSupabase();
+  const user_id = await currentUserId();
+  const [trackerData, fitnessData] = await Promise.all([fetchTrackerData(), fetchFitnessData()]);
+  const financeTables = trackerData.financeSchemaAvailable
+    ? ['savings_contributions', 'loan_payments', 'loans', 'wallet_transfers', 'transactions', 'recurring_transaction_series', 'savings_goals', 'budgets', 'finance_settings', 'wallets']
+    : ['transactions'];
+  const fitnessTables = fitnessData.fitnessSchemaAvailable
+    ? ['fitness_set_logs', 'fitness_workout_logs', 'fitness_plan_days', 'fitness_plans', 'fitness_routine_exercises', 'fitness_routines', 'custom_exercises', 'fitness_weekly_checkins', 'fitness_profiles']
+    : [];
+  const moduleTables: Record<ClearableTrackerModule, string[]> = {
+    habits: ['habit_completions', 'habits'],
+    goals: ['goal_milestones', 'goals'],
+    mood: ['mood_entries'],
+    fitness: [...fitnessTables, 'workouts', 'daily_health'],
+    todo: ['todo_subtasks', 'todos', 'todo_series'],
+    finance: financeTables,
+  };
+
+  for (const table of moduleTables[module]) {
+    const { error } = await client.from(table).delete().eq('user_id', user_id);
+    if (error) throw error;
+  }
+  return { financeSchemaAvailable: trackerData.financeSchemaAvailable, fitnessSchemaAvailable: fitnessData.fitnessSchemaAvailable };
+}
+
 const fitnessBackupTableKeys = [
   'fitness_profiles', 'custom_exercises', 'fitness_routines', 'fitness_routine_exercises',
   'fitness_plans', 'fitness_plan_days', 'fitness_workout_logs', 'fitness_set_logs',

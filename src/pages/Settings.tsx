@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, CreditCard, Dumbbell, HelpCircle, Palette, Search, Shield, Sparkles, Target, Wallet } from 'lucide-react';
 import { Card } from '../components/ui';
+import { APP_CHANGELOG, APP_VERSION, CONTACT_EMAIL } from '../appInfo';
 import AccountSettings from './settings/AccountSettings';
 import AppearanceSettings from './settings/AppearanceSettings';
 import DataPrivacySettings from './settings/DataPrivacySettings';
@@ -15,10 +16,10 @@ const sections = [
 ] as const;
 
 const moduleLinks = [
-  { to: '/habits', title: 'Habits', description: 'Manage your routines and habit tracking.', icon: Target },
-  { to: '/todos', title: 'To-Do', description: 'Open your tasks and task preferences.', icon: CreditCard },
-  { to: '/finances', title: 'Finances', description: 'Manage your finance tracker.', icon: Wallet },
-  { to: '/fitness', title: 'Fitness', description: 'Open your plan and fitness preferences.', icon: Dumbbell },
+  { to: '/habits', title: 'Habits', description: 'Open habit tracking and your routines.', icon: Target },
+  { to: '/todos', title: 'To-Do', description: 'Open your task list and recurring tasks.', icon: CreditCard },
+  { to: '/finances', title: 'Finances', description: 'Open your wallets, currency and amount controls.', icon: Wallet },
+  { to: '/fitness', title: 'Fitness', description: 'Open your plan setup and Hide Weight control.', icon: Dumbbell },
 ];
 
 function SectionContent({ section }: { section: string }) {
@@ -26,7 +27,7 @@ function SectionContent({ section }: { section: string }) {
   if (section === 'appearance') return <AppearanceSettings />;
   if (section === 'data-privacy') return <DataPrivacySettings />;
   if (section === 'modules') return <div className="grid gap-3 sm:grid-cols-2">{moduleLinks.map(({ to, title, description, icon: Icon }) => <Link key={to} to={to} className="rounded-card border border-app-border bg-app-card p-4 shadow-card transition-colors hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"><span className="flex items-center justify-between"><span className="rounded-xl bg-accent/10 p-2.5 text-accent"><Icon size={19} /></span><ChevronRight size={18} className="text-app-subtle" /></span><span className="mt-3 block font-semibold text-app-ink">{title}</span><span className="mt-1 block text-sm leading-5 text-app-subtle">{description}</span></Link>)}</div>;
-  return <Card><h2 className="font-semibold text-app-ink">About Life Tracker</h2><p className="mt-2 text-sm leading-6 text-app-subtle">Life Tracker helps you keep habits, goals, mood, fitness and finances in one place.</p><p className="mt-2 text-xs text-app-subtle">Version 1.2.0</p><div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm"><Link className="text-app-ink underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" to="/privacy">Privacy</Link><Link className="text-app-ink underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" to="/terms">Terms</Link><a className="text-app-ink underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" href="mailto:Zxy76600@gmail.com">Contact</a></div></Card>;
+  return <Card><h2 className="font-semibold text-app-ink">About Life Tracker</h2><p className="mt-2 text-sm leading-6 text-app-subtle">Life Tracker helps you keep habits, goals, mood, fitness and finances in one place.</p><p className="mt-2 text-xs text-app-subtle">Version {APP_VERSION}</p><h3 className="mt-5 font-semibold text-app-ink">Recent updates</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-5 text-app-subtle">{APP_CHANGELOG.map((item) => <li key={item}>{item}</li>)}</ul><div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm"><Link className="text-app-ink underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" to="/privacy">Privacy</Link><Link className="text-app-ink underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" to="/terms">Terms</Link><a className="text-app-ink underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" href={`mailto:${CONTACT_EMAIL}`}>Contact</a></div></Card>;
 }
 
 export default function Settings() {

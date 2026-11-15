@@ -9,21 +9,54 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <script>
-      // Anti-flicker: apply theme before React mounts
+      // Apply validated saved appearance before the first paint.
       try {
         const stored = JSON.parse(localStorage.getItem('life-tracker-theme') || '{}');
-        const theme = stored?.state?.theme || 'dark';
-        if (theme === 'dark') {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
+        const state = stored && typeof stored.state === 'object' ? stored.state : {};
+        const themes = ['light', 'dark', 'black', 'system'];
+        const accents = ['coral', 'indigo', 'blue', 'teal', 'amber', 'green'];
+        const sizes = ['small', 'default', 'large'];
+        const densities = ['comfortable', 'compact'];
+        const theme = themes.includes(state.theme) ? (state.theme === 'dark' ? 'black' : state.theme) : 'black';
+        const accent = accents.includes(state.accentColor) ? state.accentColor : 'coral';
+        const textSize = sizes.includes(state.textSize) ? state.textSize : 'default';
+        const density = densities.includes(state.density) ? state.density : 'comfortable';
+        const dark = theme === 'dark' || theme === 'black' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        const root = document.documentElement;
+        root.classList.toggle('dark', dark);
+        root.classList.toggle('black', theme === 'black' || (theme === 'system' && dark));
+        root.dataset.theme = theme;
+        root.dataset.accent = accent;
+        root.dataset.textSize = textSize;
+        root.dataset.density = density;
+        root.dataset.reduceMotion = String(state.reduceMotion === true);
+        const palettes = {
+          coral: ['#ff5a5f', '#c9363d', '#fff0f0'],
+          indigo: ['#5b5bf0', '#4338ca', '#eeeeff'],
+          blue: ['#3b82f6', '#1d4ed8', '#eff6ff'],
+          teal: ['#14b8a6', '#0f766e', '#e6fffb'],
+          amber: ['#f59e0b', '#92400e', '#fff7e6'],
+          green: ['#22a06b', '#166534', '#eaf8f0']
+        };
+        const [color, contrast, soft] = palettes[accent];
+        root.style.setProperty('--color-accent', color);
+        root.style.setProperty('--color-accent-strong', contrast);
+        root.style.setProperty('--color-accent-contrast', contrast);
+        root.style.setProperty('--color-accent-soft', dark ? `${color}26` : soft);
+        if (theme === 'system') {
+          matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+            root.classList.toggle('dark', event.matches);
+            root.classList.remove('black');
+            if (event.matches) root.classList.add('black');
+            root.style.setProperty('--color-accent-soft', event.matches ? `${color}26` : soft);
+          });
         }
-      } catch (e) {
-        document.documentElement.classList.add('dark');
+      } catch {
+        document.documentElement.classList.add('dark', 'black');
       }
     </script>
   </head>
-  <body class="bg-white text-neutral-900 dark:bg-black dark:text-neutral-100 font-sans antialiased transition-colors duration-200">
+  <body class="font-sans antialiased transition-colors duration-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,350 +1,174 @@
-import { useEffect, useState } from 'react';
-import { Card, Button } from '../components/ui';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { addDays, format, parseISO, startOfWeek, subMonths } from 'date-fns';
 import { Link } from 'react-router-dom';
-import { useHabitStore } from '../stores/habitStore';
-import { useGoalStore } from '../stores/goalStore';
-import { useMoodStore } from '../stores/moodStore';
-import { useFitnessStore } from '../stores/fitnessStore';
-import { useFinanceStore } from '../stores/financeStore';
-import { calculateStreak, getTodayStr, formatCurrency, roundMoney, sumMoney } from '../utils/helpers';
-import { loadDemoData } from '../utils/demoData';
 import { reportCloudError } from '../lib/cloudFeedback';
-import {
-  CheckSquare,
-  ListTodo,
-  Target,
-  Smile,
-  Wallet,
-  Flame,
-  TrendingUp,
-  Droplets,
-  Moon,
-  Sparkles,
-  Eye,
-  EyeOff,
-  Dumbbell,
-} from 'lucide-react';
-import { MOOD_EMOJIS, type MoodLevel } from '../types';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { format, subDays, parseISO } from 'date-fns';
+import { useAuth } from '../auth/authContext';
+import { useFinanceStore } from '../stores/financeStore';
+import { useFitnessStore } from '../stores/fitnessStore';
+import { useGoalStore } from '../stores/goalStore';
+import { useHabitStore } from '../stores/habitStore';
+import { useMoodStore } from '../stores/moodStore';
 import { useTodoStore } from '../stores/todoStore';
-import { getTodoDayStats } from '../utils/todoStats';
+import { calculateStreak, getTodayStr, roundMoney, sumMoney } from '../utils/helpers';
+import { loadDemoData } from '../utils/demoData';
+import type { DashboardStat, MoodChartPoint, WeekChartPoint } from '../components/dashboard/DashboardInsights';
+import { DashboardHeader } from '../components/dashboard/DashboardHeader';
+import { DashboardSkeleton } from '../components/dashboard/DashboardSkeleton';
+import { GetStartedCard } from '../components/dashboard/GetStartedCard';
+import { GoalsCard } from '../components/dashboard/GoalsCard';
+import { MoneyCard } from '../components/dashboard/MoneyCard';
+import { TodayCard } from '../components/dashboard/TodayCard';
 
-/**
- * Dashboard — The home page with true black dark theme and crisp white light theme.
- */
+const DashboardInsights = lazy(() => import('../components/dashboard/DashboardInsights').then((module) => ({ default: module.DashboardInsights })));
+
+function readHiddenAmounts() {
+  try { return localStorage.getItem('life-tracker-finance-hide-amounts') === 'true'; }
+  catch { return false; }
+}
+
+function InsightsSkeleton() {
+  return <>
+    {Array.from({ length: 4 }, (_, index) => <div key={`stat-${index}`} className="min-h-[146px] animate-pulse rounded-card-lg border border-app-border bg-app-card motion-reduce:animate-none" />)}
+    <div className="min-h-[300px] animate-pulse rounded-card-lg border border-app-border bg-app-card motion-reduce:animate-none sm:col-span-2" />
+    <div className="min-h-[300px] animate-pulse rounded-card-lg border border-app-border bg-app-card motion-reduce:animate-none" />
+  </>;
+}
+
 export default function Dashboard() {
-  const { habits } = useHabitStore();
-  const { goals } = useGoalStore();
-  const { entries: moodEntries } = useMoodStore();
+  const { loading: authLoading, error: authError } = useAuth();
+  const habits = useHabitStore((state) => state.habits);
+  const toggleHabitCompletion = useHabitStore((state) => state.toggleHabitCompletion);
+  const goals = useGoalStore((state) => state.goals);
+  const moodEntries = useMoodStore((state) => state.entries);
   const fitness = useFitnessStore();
-  const { getTodayHealth } = fitness;
   const finance = useFinanceStore();
-  const { transactions } = finance;
-  const [hideFinanceAmounts, setHideFinanceAmounts] = useState(() => localStorage.getItem('life-tracker-finance-hide-amounts') === 'true');
-  const { todos } = useTodoStore();
-  const today = getTodayStr();
-  const todayHealth = getTodayHealth();
-  const todayTodoStats = getTodoDayStats(todos, today);
-  const openTodosToday = todos.filter((todo) => todo.date === today && !todo.completedAt).length;
+  const todoStore = useTodoStore();
+  const [hideFinanceAmounts, setHideFinanceAmounts] = useState(readHiddenAmounts);
 
   useEffect(() => {
     if (!fitness.isLoaded && !fitness.isLoading) void fitness.loadFitnessData();
   }, [fitness.isLoaded, fitness.isLoading, fitness.loadFitnessData]);
 
-  const currentFitnessPlan = fitness.getCurrentPlan();
-  const plannedFitnessDays = currentFitnessPlan?.days.filter((day) => !day.isSkipped) ?? [];
-  const completedFitnessDays = plannedFitnessDays.filter((day) => fitness.workoutLogs.some(
-    (log) => log.planDayId === day.id || (!log.planDayId && log.date === day.scheduledDate),
-  )).length;
-  const workoutsPlannedThisWeek = plannedFitnessDays.length || fitness.profile?.trainingDaysPerWeek || 0;
+  const today = getTodayStr();
+  const todayDate = parseISO(today);
+  const dateLabel = format(todayDate, 'EEEE, MMMM d');
+  const weekStart = startOfWeek(todayDate, { weekStartsOn: 1 });
+  const weekStartKey = format(weekStart, 'yyyy-MM-dd');
+  const weekDates = useMemo(() => Array.from({ length: 7 }, (_, index) => format(addDays(weekStart, index), 'yyyy-MM-dd')), [weekStartKey]);
 
-  // Calculate stats
-  const habitsCompletedToday = habits.filter((h) =>
-    h.completedDates.includes(today)
-  ).length;
-  const totalHabits = habits.length;
-  const completionRate = totalHabits > 0 ? Math.round((habitsCompletedToday / totalHabits) * 100) : 0;
+  const habitsDueToday = habits.filter((habit) => habit.frequency === 'daily' || !habit.completedDates.some((date) => date >= weekStartKey && date <= today));
+  const todayHabits = habitsDueToday.map((habit) => ({
+    id: habit.id,
+    name: habit.name,
+    frequency: habit.frequency,
+    completed: habit.frequency === 'weekly'
+      ? habit.completedDates.some((date) => date >= weekStartKey && date <= today)
+      : habit.completedDates.includes(today),
+  }));
+  const todayTasks = todoStore.todos
+    .filter((todo) => todo.date === today)
+    .sort((a, b) => (a.time ?? '99:99').localeCompare(b.time ?? '99:99') || a.position - b.position)
+    .map((todo) => ({ id: todo.id, title: todo.title, time: todo.time, completed: Boolean(todo.completedAt) }));
 
-  const bestStreak = habits.reduce(
-    (max, h) => Math.max(max, calculateStreak(h.completedDates)),
-    0
-  );
+  const currentPlan = fitness.getCurrentPlan();
+  const plannedFitnessDays = currentPlan?.days.filter((day) => !day.isSkipped) ?? [];
+  const scheduledToday = plannedFitnessDays.find((day) => day.scheduledDate === today) ?? null;
+  const workoutForPlanDay = (dayId: string, date: string) => fitness.workoutLogs.some((log) => log.planDayId === dayId || (!log.planDayId && log.date === date));
+  const todayWorkoutComplete = scheduledToday ? workoutForPlanDay(scheduledToday.id, scheduledToday.scheduledDate) : false;
+  const completedTodayCount = todayHabits.filter((habit) => habit.completed).length + todayTasks.filter((task) => task.completed).length + Number(Boolean(scheduledToday && todayWorkoutComplete));
+  const plannedTodayCount = todayHabits.length + todayTasks.length + Number(Boolean(scheduledToday));
 
-  const activeGoals = goals.filter((g) => !g.completed).length;
-  const completedGoals = goals.filter((g) => g.completed).length;
+  const weekData: WeekChartPoint[] = useMemo(() => weekDates.map((date) => ({
+    date,
+    day: format(parseISO(date), 'EEE'),
+    tasks: todoStore.todos.filter((todo) => todo.completedAt && format(parseISO(todo.completedAt), 'yyyy-MM-dd') === date).length,
+    habits: habits.filter((habit) => habit.completedDates.includes(date)).length,
+  })), [weekDates, todoStore.todos, habits]);
 
-  const todayMood = moodEntries.find((e) => e.date === today);
+  const moodData: MoodChartPoint[] = useMemo(() => weekDates.slice(-7).map((date) => ({
+    date,
+    day: format(parseISO(date), 'EEE'),
+    mood: moodEntries.find((entry) => entry.date === date)?.mood ?? null,
+  })), [weekDates, moodEntries]);
 
-  // Monthly finance summary
-  const currentMonth = format(new Date(), 'yyyy-MM');
-  const monthlyTransactions = transactions.filter((t) =>
-    t.date.startsWith(currentMonth)
-  );
-  const monthlyIncome = monthlyTransactions
-    .filter((t) => t.type === 'income')
-    .reduce((sum, t) => roundMoney(sum + t.amount), 0);
-  const monthlyExpenses = monthlyTransactions
-    .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => roundMoney(sum + t.amount), 0);
+  const bestStreak = habits.reduce((maximum, habit) => Math.max(maximum, calculateStreak(habit.completedDates)), 0);
+  const openTodos = todoStore.todos.filter((todo) => !todo.completedAt);
+  const overdueTasks = openTodos.filter((todo) => todo.date < today).length;
+  const completedPlannedWorkouts = plannedFitnessDays.filter((day) => workoutForPlanDay(day.id, day.scheduledDate)).length;
+  const weeklyWorkoutCount = fitness.workoutLogs.filter((log) => log.date >= weekStartKey && log.date <= weekDates[6]).length;
+  const workoutsCompleted = plannedFitnessDays.length ? completedPlannedWorkouts : weeklyWorkoutCount;
+  const workoutsPlanned = plannedFitnessDays.length || fitness.profile?.trainingDaysPerWeek || 0;
+
+  const monthKey = format(todayDate, 'yyyy-MM');
+  const monthlyTransactions = finance.transactions.filter((transaction) => transaction.date.startsWith(monthKey));
+  const monthlyIncome = sumMoney(monthlyTransactions.filter((transaction) => transaction.type === 'income').map((transaction) => transaction.amount));
+  const monthlySpending = sumMoney(monthlyTransactions.filter((transaction) => transaction.type === 'expense').map((transaction) => transaction.amount));
+  const monthlyBalance = roundMoney(monthlyIncome - monthlySpending);
   const remainingForLoan = (loanId: string, amount: number) => Math.max(0, roundMoney(amount - sumMoney(finance.loanPayments.filter((payment) => payment.loanId === loanId).map((payment) => payment.amount))));
   const toReceive = sumMoney(finance.loans.filter((loan) => loan.direction === 'lent').map((loan) => remainingForLoan(loan.id, loan.amount)));
   const toPay = sumMoney(finance.loans.filter((loan) => loan.direction === 'borrowed').map((loan) => remainingForLoan(loan.id, loan.amount)));
-  const savingsGoal = finance.savingsGoals[0];
-  const savingsProgress = savingsGoal ? sumMoney(finance.savingsContributions.filter((item) => item.goalId === savingsGoal.id).map((item) => item.amount)) : 0;
-  const showFinanceAmount = (amount: number) => hideFinanceAmounts ? '••••••' : formatCurrency(amount, finance.financeSettings.currency);
 
-  // Build mood chart data for last 7 days
-  const moodChartData = Array.from({ length: 7 }, (_, i) => {
-    const date = format(subDays(new Date(), 6 - i), 'yyyy-MM-dd');
-    const entry = moodEntries.find((e) => e.date === date);
-    return {
-      day: format(parseISO(date), 'EEE'),
-      mood: entry?.mood ?? null,
-    };
+  const habitActivity = weekData.map((point) => point.habits);
+  const taskActivity = weekData.map((point) => point.tasks);
+  const workoutActivity = weekDates.map((date) => fitness.workoutLogs.filter((log) => log.date === date).length);
+  const balanceActivity = Array.from({ length: 6 }, (_, index) => {
+    const month = format(subMonths(todayDate, 5 - index), 'yyyy-MM');
+    const monthTransactions = finance.transactions.filter((transaction) => transaction.date.startsWith(month));
+    return roundMoney(sumMoney(monthTransactions.filter((transaction) => transaction.type === 'income').map((transaction) => transaction.amount)) - sumMoney(monthTransactions.filter((transaction) => transaction.type === 'expense').map((transaction) => transaction.amount)));
   });
-
-  // Stats cards data
-  const statCards = [
-    {
-      label: 'Habits Today',
-      value: `${habitsCompletedToday}/${totalHabits}`,
-      subtext: `${completionRate}% complete`,
-      icon: CheckSquare,
-      tone: 'coral',
-    },
-    {
-      label: 'Best Streak',
-      value: `${bestStreak} days`,
-      subtext: 'Keep it going! 🔥',
-      icon: Flame,
-      tone: 'indigo',
-    },
-    {
-      label: 'Active Goals',
-      value: `${activeGoals}`,
-      subtext: `${completedGoals} completed`,
-      icon: Target,
-      tone: 'green',
-    },
-    {
-      label: "Today's Mood",
-      value: todayMood ? MOOD_EMOJIS[todayMood.mood as MoodLevel] : '—',
-      subtext: todayMood ? `Feeling ${todayMood.mood >= 4 ? 'great' : todayMood.mood >= 3 ? 'okay' : 'down'}` : 'Not logged yet',
-      icon: Smile,
-      tone: 'teal',
-    },
-    {
-      label: 'Water Today',
-      value: `${todayHealth.waterGlasses} glasses`,
-      subtext: '8 glasses is the goal 💧',
-      icon: Droplets,
-      tone: 'blue',
-    },
-    {
-      label: 'Sleep',
-      value: todayHealth.sleepHours > 0 ? `${todayHealth.sleepHours}h` : '—',
-      subtext: todayHealth.sleepHours >= 7 ? 'Well rested! 🌙' : 'Log your sleep',
-      icon: Moon,
-      tone: 'amber',
-    },
+  const stats: DashboardStat[] = [
+    { id: 'streak', label: 'Best habit streak', value: bestStreak, detail: 'Your strongest current run', sparkline: habitActivity },
+    { id: 'tasks', label: 'Open tasks', value: openTodos.length, detail: overdueTasks ? `${overdueTasks} overdue` : 'Nothing overdue', sparkline: taskActivity },
+    { id: 'workouts', label: 'Workouts this week', value: workoutsCompleted, planned: workoutsPlanned, detail: workoutsPlanned ? 'Keep your weekly rhythm' : 'Set up Fitness to plan workouts', sparkline: workoutActivity },
+    { id: 'balance', label: 'This month’s balance', value: monthlyBalance, detail: 'Income minus spending', sparkline: balanceActivity },
   ];
 
+  const hasAnyData = Boolean(
+    habits.length || goals.length || moodEntries.length || todoStore.todos.length || todoStore.series.length ||
+    fitness.profile || fitness.workouts.length || fitness.dailyHealth.length || fitness.customExercises.length || fitness.routines.length || fitness.plans.length || fitness.workoutLogs.length || fitness.weeklyCheckins.length ||
+    finance.transactions.length || finance.wallets.length || finance.transfers.length || finance.loans.length || finance.loanPayments.length || finance.budgets.length || finance.recurringTransactionSeries.length || finance.savingsGoals.length || finance.savingsContributions.length,
+  );
+
+  const toggleFinanceAmounts = () => {
+    const next = !hideFinanceAmounts;
+    setHideFinanceAmounts(next);
+    try { localStorage.setItem('life-tracker-finance-hide-amounts', String(next)); } catch { /* Keep the dashboard preference for this visit. */ }
+  };
+  const toggleTask = (id: string) => { void todoStore.toggleTodo(id).catch(() => undefined); };
+  const loadSampleData = async () => {
+    try { await loadDemoData(); window.location.reload(); }
+    catch (error) { reportCloudError(error); }
+  };
+
+  if (authLoading || (fitness.isLoading && !fitness.isLoaded)) return <DashboardSkeleton />;
+
+  const dashboardError = authError || todoStore.error;
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Welcome section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-app-ink">Your personal overview</p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-app-ink sm:text-3xl">
-            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}! <span aria-hidden="true">👋</span>
-          </h2>
-          <p className="mt-1 text-sm text-app-subtle sm:text-base">Here's your life at a glance. Keep moving at your own pace.</p>
-        </div>
-        <p className="text-sm font-medium text-app-subtle">{format(new Date(), 'EEEE, MMMM d')}</p>
-      </div>
+    <div className="space-y-5 sm:space-y-6">
+      <DashboardHeader today={today} dateLabel={dateLabel} />
+      {dashboardError && <div role="alert" className="rounded-2xl border border-app-border bg-app-card px-4 py-3 text-sm text-app-subtle">Some tracker updates are taking a little longer to appear. You can continue with the information that’s available. {todoStore.error && <Link to="/todos" className="ml-1 font-semibold text-app-ink underline decoration-accent underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Open To-Do</Link>}</div>}
 
-      {/* Informational week strip. Dashboard summaries are currently for today. */}
-      <div className="overflow-x-auto pb-1">
-        <div aria-label="Current week, today selected" className="flex min-w-max gap-2">
-          {Array.from({ length: 7 }, (_, index) => {
-            const date = subDays(new Date(), 6 - index);
-            const isToday = index === 6;
-            return (
-              <div key={format(date, 'yyyy-MM-dd')} aria-current={isToday ? 'date' : undefined} className={`flex min-w-[48px] flex-col items-center gap-1 rounded-xl px-2.5 py-2 text-center ${isToday ? 'bg-accent-contrast text-white shadow-accent' : 'bg-app-card text-app-subtle ring-1 ring-inset ring-app-border'}`}>
-                <span className={`text-[10px] font-medium uppercase ${isToday ? 'text-white/80' : ''}`}>{format(date, 'EEE')}</span>
-                <span className="text-sm font-bold tabular-nums">{format(date, 'd')}</span>
-              </div>
-            );
-          })}
+      {!hasAnyData ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"><GetStartedCard onLoadSample={loadSampleData} /></div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
+          <TodayCard
+            habits={todayHabits}
+            tasks={todayTasks}
+            plannedWorkout={scheduledToday ? { name: scheduledToday.name, completed: todayWorkoutComplete } : null}
+            hasFitnessProfile={Boolean(fitness.profile)}
+            completedCount={completedTodayCount}
+            plannedCount={plannedTodayCount}
+            onHabitToggle={(id) => toggleHabitCompletion(id, today)}
+            onTaskToggle={toggleTask}
+          />
+          <Suspense fallback={<InsightsSkeleton />}>
+            <DashboardInsights weekData={weekData} moodData={moodData} stats={stats} currency={finance.financeSettings.currency} hideAmounts={hideFinanceAmounts} />
+          </Suspense>
+          <MoneyCard income={monthlyIncome} spending={monthlySpending} budget={finance.financeSettings.overallMonthlyBudget} toReceive={toReceive} toPay={toPay} currency={finance.financeSettings.currency} hideAmounts={hideFinanceAmounts} onToggleHideAmounts={toggleFinanceAmounts} />
+          <GoalsCard goals={goals} />
         </div>
-      </div>
-
-      {/* Quick Start / Demo Data Banner for first-time visitors */}
-      {totalHabits === 0 && activeGoals === 0 && moodEntries.length === 0 && (
-        <Card className="border-accent/20 bg-accent-soft shadow-card dark:border-accent/20 dark:bg-accent/10">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-accent text-white shadow-accent">
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-app-ink">Welcome to your Life Tracker!</h3>
-                <p className="text-sm text-app-subtle">
-                  Ready to see it in action? Load sample data to explore charts, streaks, and trackers, or start adding your own!
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => {
-                void loadDemoData().then(() => window.location.reload()).catch(reportCloudError);
-              }}
-              className="shrink-0"
-            >
-              <Sparkles size={16} />
-              Load Sample Data
-            </Button>
-          </div>
-        </Card>
       )}
-
-      {/* Stat Cards Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
-        {statCards.map((stat) => (
-          <Card key={stat.label} hover className={`min-w-0 border-l-4 ${stat.tone === 'coral' ? 'border-l-accent' : stat.tone === 'indigo' ? 'border-l-cat-indigo' : stat.tone === 'green' ? 'border-l-cat-green' : stat.tone === 'teal' ? 'border-l-cat-teal' : stat.tone === 'blue' ? 'border-l-cat-blue' : 'border-l-cat-amber'}`}>
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-xs font-medium text-app-subtle sm:text-sm">{stat.label}</p>
-                <p className="mt-2 text-2xl font-bold leading-none tracking-tight text-app-ink tabular-nums sm:text-3xl">{stat.value}</p>
-                <p className="mt-2 text-[11px] text-app-subtle sm:text-xs">{stat.subtext}</p>
-              </div>
-              <div className={`rounded-xl p-2 ${stat.tone === 'coral' ? 'bg-accent/10 text-accent' : stat.tone === 'indigo' ? 'bg-cat-indigo/10 text-cat-indigo' : stat.tone === 'green' ? 'bg-cat-green/10 text-cat-green' : stat.tone === 'teal' ? 'bg-cat-teal/10 text-cat-teal' : stat.tone === 'blue' ? 'bg-cat-blue/10 text-cat-blue' : 'bg-cat-amber/10 text-cat-amber'}`}>
-                <stat.icon size={20} />
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Link to="/todos" className="block rounded-card-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg">
-        <Card hover className="flex items-center justify-between gap-4 border-l-4 border-l-accent p-4 sm:p-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="rounded-xl bg-accent/10 p-2.5 text-accent"><ListTodo size={21} /></div>
-            <div className="min-w-0"><p className="text-sm font-semibold text-app-subtle">Today’s To-Dos</p><p className="mt-1 text-xl font-bold text-app-ink">{openTodosToday} open <span className="text-sm font-medium text-app-subtle">· {todayTodoStats.percent}% complete</span></p></div>
-          </div>
-          <span className="shrink-0 text-sm font-semibold text-app-ink">View tasks <span aria-hidden="true">→</span></span>
-        </Card>
-      </Link>
-
-      <Link to="/fitness" aria-label="Open Fitness" className="block rounded-card-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg">
-        <Card hover className="flex items-center justify-between gap-4 border-l-4 border-l-cat-indigo p-4 sm:p-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="rounded-xl bg-cat-indigo/10 p-2.5 text-cat-indigo"><Dumbbell size={21} /></div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-app-subtle">Fitness</p>
-              <p className="mt-1 truncate text-lg font-bold text-app-ink">{!fitness.profile ? 'Set up your plan' : plannedFitnessDays.find((day) => day.scheduledDate === today)?.name ?? 'Rest day'}</p>
-              <p className="text-xs text-app-subtle">{completedFitnessDays} of {workoutsPlannedThisWeek} workouts this week</p>
-            </div>
-          </div>
-          <span className="shrink-0 text-sm font-semibold text-app-ink">{!fitness.profile ? 'Set up' : 'Open Fitness'} <span aria-hidden="true">→</span></span>
-        </Card>
-      </Link>
-
-      {/* Charts Row */}
-      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
-        {/* Mood Trend Chart */}
-        <Card>
-          <h3 className="mb-4 text-sm font-semibold text-app-ink">
-            Mood Trend (Last 7 Days)
-          </h3>
-          {moodEntries.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={moodChartData}>
-                <defs>
-                  <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-cat-teal)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="var(--color-cat-teal)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-app-border)" />
-                <XAxis dataKey="day" stroke="var(--color-app-subtle)" fontSize={12} />
-                <YAxis domain={[1, 5]} stroke="var(--color-app-subtle)" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--app-card)',
-                    border: '1px solid var(--app-border)',
-                    borderRadius: 'var(--radius-card)',
-                    color: 'var(--app-ink)',
-                    boxShadow: 'var(--shadow-card)',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="mood"
-                  stroke="var(--color-cat-teal)"
-                  fill="url(#moodGradient)"
-                  strokeWidth={2}
-                  connectNulls
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex h-[200px] items-center justify-center text-sm text-app-subtle">
-              Start logging your mood to see trends here
-            </div>
-          )}
-        </Card>
-
-        {/* Finance Summary */}
-        <Card>
-          <div className="mb-4 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold text-app-ink">This Month's Finances</h3><button type="button" aria-label={hideFinanceAmounts ? 'Show finance amounts' : 'Hide finance amounts'} onClick={() => { const next = !hideFinanceAmounts; setHideFinanceAmounts(next); localStorage.setItem('life-tracker-finance-hide-amounts', String(next)); }} className="rounded-lg p-2 text-app-subtle hover:bg-app-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">{hideFinanceAmounts ? <Eye size={17}/> : <EyeOff size={17}/>}</button></div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={18} className="text-cat-green" />
-                <span className="text-sm text-app-subtle">Income</span>
-              </div>
-              <span className="font-semibold text-cat-green">
-                {showFinanceAmount(monthlyIncome)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wallet size={18} className="text-accent" />
-                <span className="text-sm text-app-subtle">Expenses</span>
-              </div>
-              <span className="font-semibold text-app-ink">
-                {showFinanceAmount(monthlyExpenses)}
-              </span>
-            </div>
-            <div className="border-t border-app-border pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-app-ink">Balance</span>
-                <span
-                  className={`text-lg font-bold ${
-                    monthlyIncome - monthlyExpenses >= 0
-                    ? 'text-cat-green-ink'
-                    : 'text-app-ink'
-                  }`}
-                >
-                  {showFinanceAmount(monthlyIncome - monthlyExpenses)}
-                </span>
-              </div>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-app-border pt-3"><div><p className="text-xs text-app-subtle">Loans to receive</p><p className="mt-1 text-sm font-bold text-cat-green-ink">{showFinanceAmount(toReceive)}</p></div><div><p className="text-xs text-app-subtle">Loans to pay</p><p className="mt-1 text-sm font-bold text-cat-indigo">{showFinanceAmount(toPay)}</p></div></div>
-            {savingsGoal && <Link to="/finances" className="mt-3 block rounded-xl bg-cat-indigo/10 px-3 py-2 text-xs text-app-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"><span className="font-semibold">Saving for {savingsGoal.name}</span><span className="ml-2 text-app-subtle">{showFinanceAmount(savingsProgress)} of {showFinanceAmount(savingsGoal.targetAmount)}</span></Link>}
-            <Link to="/finances" className="mt-3 inline-flex text-xs font-semibold text-app-ink underline decoration-accent underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Open Finances</Link>
-          </div>
-        </Card>
-      </div>
     </div>
   );
 }

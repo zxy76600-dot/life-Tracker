@@ -90,9 +90,9 @@ export default function Settings() {
   };
 
   const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to delete ALL data? This cannot be undone!')) {
+    if (window.confirm('Are you sure you want to delete ALL data, including fitness profiles, workout logs, check-ins, and the saved in-progress workout? This cannot be undone!')) {
       setBusy(true);
-      try { await clearCloudData(); clearLegacyKeys(); window.location.reload(); }
+      try { await clearCloudData(); clearLegacyKeys(); localStorage.removeItem('life-tracker-fitness-workout-draft'); window.location.reload(); }
       catch (error) { setMessageIsError(true); setExportMessage(error instanceof Error ? error.message : 'Could not clear cloud data.'); }
       finally { setBusy(false); }
     }

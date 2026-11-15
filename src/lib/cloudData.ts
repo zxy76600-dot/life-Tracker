@@ -900,22 +900,79 @@ export async function createSplitExpense(transaction: Transaction, shares: Array
 export async function clearCloudData() {
   const client = requireSupabase();
   const user_id = await currentUserId();
-  const financeSchemaAvailable = (await fetchTrackerData()).financeSchemaAvailable;
+  const [trackerData, fitnessData] = await Promise.all([fetchTrackerData(), fetchFitnessData()]);
+  const financeSchemaAvailable = trackerData.financeSchemaAvailable;
   const financeTables = financeSchemaAvailable ? ['savings_contributions', 'loan_payments', 'loans', 'wallet_transfers', 'transactions', 'recurring_transaction_series', 'savings_goals', 'budgets', 'finance_settings', 'wallets'] : ['transactions'];
-  for (const table of [...financeTables, 'todos', 'todo_series', 'habits', 'goals', 'mood_entries', 'workouts', 'daily_health']) {
+  const fitnessTables = fitnessData.fitnessSchemaAvailable
+    ? ['fitness_set_logs', 'fitness_workout_logs', 'fitness_plan_days', 'fitness_plans', 'fitness_routine_exercises', 'fitness_routines', 'custom_exercises', 'fitness_weekly_checkins', 'fitness_profiles']
+    : [];
+  for (const table of [...financeTables, 'todos', 'todo_series', 'habits', 'goals', 'mood_entries', ...fitnessTables, 'workouts', 'daily_health']) {
     const { error } = await client.from(table).delete().eq('user_id', user_id);
     if (error) throw error;
   }
 }
 
+const fitnessBackupTableKeys = [
+  'fitness_profiles', 'custom_exercises', 'fitness_routines', 'fitness_routine_exercises',
+  'fitness_plans', 'fitness_plan_days', 'fitness_workout_logs', 'fitness_set_logs',
+  'fitness_weekly_checkins',
+] as const;
+
 export async function exportCloudBackup() {
-  const data = await fetchTrackerData();
+  const [data, fitness] = await Promise.all([fetchTrackerData(), fetchFitnessData()]);
+  const fitnessRows = fitness.fitnessSchemaAvailable ? {
+    fitness_profiles: fitness.profile ? [{
+      goal_mode: fitness.profile.goalMode,
+      experience: fitness.profile.experience,
+      training_days_per_week: fitness.profile.trainingDaysPerWeek,
+      equipment: fitness.profile.equipment,
+      units: fitness.profile.units,
+      confirmed_18_or_older: fitness.profile.confirmed18OrOlder,
+      hide_weight: fitness.profile.hideWeight,
+      created_at: fitness.profile.createdAt ?? null,
+      updated_at: fitness.profile.updatedAt ?? null,
+    }] : [],
+    custom_exercises: fitness.customExercises.map((item) => ({
+      id: item.id, name: item.name, muscle_group: item.muscleGroup, equipment: item.equipment,
+      is_bodyweight: item.isBodyweight, form_cues: item.formCues, substitutes: item.substitutes, created_at: item.createdAt,
+    })),
+    fitness_routines: fitness.routines.map((item) => ({
+      id: item.id, name: item.name, notes: item.notes, created_at: item.createdAt, updated_at: item.updatedAt,
+    })),
+    fitness_routine_exercises: fitness.routines.flatMap((routine) => routine.exercises.map((item) => ({
+      id: item.id, routine_id: routine.id, exercise_id: item.exerciseId, target_sets: item.targetSets,
+      min_reps: item.minReps, max_reps: item.maxReps, target_weight: item.targetWeight ?? null,
+      position: item.position, created_at: null,
+    }))),
+    fitness_plans: fitness.plans.map((item) => ({
+      id: item.id, week_start_date: item.weekStartDate, goal_mode: item.goalMode, notes: item.notes,
+      created_at: item.createdAt, updated_at: item.updatedAt,
+    })),
+    fitness_plan_days: fitness.plans.flatMap((plan) => plan.days.map((item) => ({
+      id: item.id, plan_id: plan.id, day_of_week: item.dayOfWeek, scheduled_date: item.scheduledDate,
+      name: item.name, exercises: item.exercises, is_skipped: item.isSkipped, position: item.position, created_at: null,
+    }))),
+    fitness_workout_logs: fitness.workoutLogs.map((item) => ({
+      id: item.id, plan_day_id: item.planDayId ?? null, routine_id: item.routineId ?? null, name: item.name,
+      workout_date: item.date, started_at: item.startedAt ?? null, completed_at: item.completedAt ?? null,
+      notes: item.notes, created_at: item.createdAt,
+    })),
+    fitness_set_logs: fitness.workoutLogs.flatMap((log) => log.sets.map((item) => ({
+      id: item.id, workout_log_id: log.id, exercise_id: item.exerciseId, set_number: item.setNumber,
+      reps: item.reps, weight: item.weight, completed: item.completed, is_pr: item.isPr, created_at: null,
+    }))),
+    fitness_weekly_checkins: fitness.weeklyCheckins.map((item) => ({
+      id: item.id, week_start_date: item.weekStartDate, workouts_completed: item.workoutsCompleted,
+      workouts_planned: item.workoutsPlanned, energy: item.energy, sleep: item.sleep, hunger: item.hunger,
+      soreness: item.soreness, weight: item.weight, adjustments: item.adjustments, created_at: item.createdAt,
+    })),
+  } : Object.fromEntries(fitnessBackupTableKeys.map((key) => [key, []]));
   const theme = localStorage.getItem('life-tracker-theme');
   return {
     'life-tracker-habits': JSON.stringify({ state: { habits: data.habits }, version: 0 }),
     'life-tracker-goals': JSON.stringify({ state: { goals: data.goals }, version: 0 }),
     'life-tracker-mood': JSON.stringify({ state: { entries: data.entries }, version: 0 }),
-    'life-tracker-fitness': JSON.stringify({ state: { workouts: data.workouts, dailyHealth: data.dailyHealth }, version: 0 }),
+    'life-tracker-fitness': JSON.stringify({ state: { workouts: data.workouts, dailyHealth: data.dailyHealth, ...fitnessRows }, version: 0 }),
     'life-tracker-finances': JSON.stringify({ state: { transactions: data.transactions }, version: 0 }),
     'life-tracker-finance-details': JSON.stringify({ state: {
       wallets: data.wallets, transfers: data.transfers, loans: data.loans, loanPayments: data.loanPayments,
@@ -947,16 +1004,25 @@ export function getLegacyBackup(): LegacyBackup {
 }
 
 export async function importLegacyBackup(backup: LegacyBackup) {
-  const data = await fetchTrackerData();
+  const [data, cloudFitness] = await Promise.all([fetchTrackerData(), fetchFitnessData()]);
+  const hasCloudFitnessData = cloudFitness.fitnessSchemaAvailable && (
+    Boolean(cloudFitness.profile) || cloudFitness.customExercises.length > 0 || cloudFitness.routines.length > 0
+    || cloudFitness.plans.length > 0 || cloudFitness.workoutLogs.length > 0 || cloudFitness.weeklyCheckins.length > 0
+  );
   const hasCloudData = [data.habits, data.goals, data.entries, data.workouts, data.transactions, data.todos, data.todoSeries,
     data.wallets, data.transfers, data.loans, data.loanPayments, data.budgets, data.savingsGoals, data.savingsContributions]
-    .some((items) => items.length > 0) || data.financeSettingsExists;
+    .some((items) => items.length > 0) || data.financeSettingsExists || hasCloudFitnessData;
   if (hasCloudData) throw new Error('Cloud data already exists. Import is disabled to prevent overwriting it.');
 
   const habits = parseLegacy<Habit>(backup, legacyKeys[0], 'habits');
   const goals = parseLegacy<Goal>(backup, legacyKeys[1], 'goals');
   const entries = parseLegacy<MoodEntry>(backup, legacyKeys[2], 'entries');
-  const fitness = JSON.parse(backup[legacyKeys[3]] ?? '{"state":{}}') as { state?: { workouts?: Workout[]; dailyHealth?: DailyHealth[] } };
+  let fitness: { state?: Record<string, unknown> };
+  try {
+    const parsed: unknown = JSON.parse(backup[legacyKeys[3]] ?? '{"state":{}}');
+    if (!parsed || typeof parsed !== 'object' || !('state' in parsed) || !parsed.state || typeof parsed.state !== 'object' || Array.isArray(parsed.state)) throw new Error();
+    fitness = parsed as { state?: Record<string, unknown> };
+  } catch { throw new Error('Fitness backup data is invalid.'); }
   const finance = parseLegacy<Transaction>(backup, legacyKeys[4], 'transactions');
   let financeDetails: Record<string, unknown> = {};
   try {
@@ -984,9 +1050,18 @@ export async function importLegacyBackup(backup: LegacyBackup) {
   } catch { throw new Error('To-Do backup data is invalid.'); }
   const todos = todoBackup.state?.todos ?? [];
   const todoSeries = todoBackup.state?.series ?? [];
-  const workouts = fitness.state?.workouts ?? [];
-  const dailyHealth = fitness.state?.dailyHealth ?? [];
+  const workouts = (fitness.state?.workouts ?? []) as Workout[];
+  const dailyHealth = (fitness.state?.dailyHealth ?? []) as DailyHealth[];
   if (!Array.isArray(workouts) || !Array.isArray(dailyHealth)) throw new Error('Fitness backup data is invalid.');
+  const fitnessRows = {} as Record<(typeof fitnessBackupTableKeys)[number], Row[]>;
+  for (const key of fitnessBackupTableKeys) {
+    const value = fitness.state?.[key] ?? [];
+    if (!Array.isArray(value)) throw new Error('Fitness backup data is invalid.');
+    fitnessRows[key] = value as Row[];
+  }
+  if (!cloudFitness.fitnessSchemaAvailable && fitnessBackupTableKeys.some((key) => fitnessRows[key].length > 0)) {
+    throw new Error('This backup contains fitness plans or progress, but the fitness tables are unavailable. No restore was started so that data is not lost.');
+  }
   if (!Array.isArray(todos) || !Array.isArray(todoSeries)) throw new Error('To-Do backup data is invalid.');
   if (todos.some((todo) => !todo || typeof todo.id !== 'string' || typeof todo.title !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(todo.date) || !Array.isArray(todo.subtasks)
     || !['low', 'medium', 'high'].includes(todo.priority) || todo.subtasks.some((item) => !item || typeof item.id !== 'string' || typeof item.title !== 'string'))) throw new Error('To-Do backup data is invalid.');
@@ -997,7 +1072,7 @@ export async function importLegacyBackup(backup: LegacyBackup) {
   if (todos.some((todo) => todo.seriesId && !seriesIds.has(todo.seriesId))) throw new Error('To-Do backup contains a task with a missing repeating schedule.');
   const hasFinanceDetails = detailArrays.some((key) => Array.isArray(financeDetails[key]) && (financeDetails[key] as unknown[]).length > 0)
     || Boolean(financeDetails.financeSettings);
-  if (![habits, goals, entries, workouts, dailyHealth, finance, todos, todoSeries].some((items) => items.length > 0) && !hasFinanceDetails) {
+  if (![habits, goals, entries, workouts, dailyHealth, finance, todos, todoSeries, ...fitnessBackupTableKeys.map((key) => fitnessRows[key])].some((items) => items.length > 0) && !hasFinanceDetails) {
     throw new Error('This backup contains no tracker records to import.');
   }
 
@@ -1009,6 +1084,15 @@ export async function importLegacyBackup(backup: LegacyBackup) {
     mood_entries: entries.map(({ id, date, mood, note, tags }) => ({ id, entry_date: date, mood, note, tags })),
     workouts: workouts.map(({ id, type, name, duration, calories, date, notes }) => ({ id, type, name, duration, calories, workout_date: date, notes })),
     daily_health: dailyHealth.map(({ date, sleepHours, waterGlasses }) => ({ health_date: date, sleep_hours: sleepHours, water_glasses: waterGlasses })),
+    fitness_profiles: fitnessRows.fitness_profiles,
+    custom_exercises: fitnessRows.custom_exercises,
+    fitness_routines: fitnessRows.fitness_routines,
+    fitness_routine_exercises: fitnessRows.fitness_routine_exercises,
+    fitness_plans: fitnessRows.fitness_plans,
+    fitness_plan_days: fitnessRows.fitness_plan_days,
+    fitness_workout_logs: fitnessRows.fitness_workout_logs,
+    fitness_set_logs: fitnessRows.fitness_set_logs,
+    fitness_weekly_checkins: fitnessRows.fitness_weekly_checkins,
     transactions: finance.map(({ id, type, amount, category, description, date, walletId, recurringSeriesId, splitTotalAmount }) => ({ id, type, amount: Math.round((Number(amount) + Number.EPSILON) * 100) / 100, category, description, transaction_date: date, wallet_id: walletId ?? null, recurring_series_id: recurringSeriesId ?? null, split_total_amount: splitTotalAmount ?? null })),
     todo_series: todoSeries.map((series) => ({
       id: series.id, title: series.title, notes: series.notes ?? '', task_time: series.time, priority: series.priority,

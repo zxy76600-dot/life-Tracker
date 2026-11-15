@@ -1,14 +1,17 @@
+import { useEffect, useState } from 'react';
 import { Card, Button } from '../components/ui';
+import { Link } from 'react-router-dom';
 import { useHabitStore } from '../stores/habitStore';
 import { useGoalStore } from '../stores/goalStore';
 import { useMoodStore } from '../stores/moodStore';
 import { useFitnessStore } from '../stores/fitnessStore';
 import { useFinanceStore } from '../stores/financeStore';
-import { calculateStreak, getTodayStr, formatCurrency } from '../utils/helpers';
+import { calculateStreak, getTodayStr, formatCurrency, roundMoney, sumMoney } from '../utils/helpers';
 import { loadDemoData } from '../utils/demoData';
 import { reportCloudError } from '../lib/cloudFeedback';
 import {
   CheckSquare,
+  ListTodo,
   Target,
   Smile,
   Wallet,
@@ -17,6 +20,9 @@ import {
   Droplets,
   Moon,
   Sparkles,
+  Eye,
+  EyeOff,
+  Dumbbell,
 } from 'lucide-react';
 import { MOOD_EMOJIS, type MoodLevel } from '../types';
 import {
@@ -29,6 +35,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
+import { useTodoStore } from '../stores/todoStore';
+import { getTodoDayStats } from '../utils/todoStats';
 
 /**
  * Dashboard — The home page with true black dark theme and crisp white light theme.
@@ -37,10 +45,27 @@ export default function Dashboard() {
   const { habits } = useHabitStore();
   const { goals } = useGoalStore();
   const { entries: moodEntries } = useMoodStore();
-  const { getTodayHealth } = useFitnessStore();
-  const { transactions } = useFinanceStore();
+  const fitness = useFitnessStore();
+  const { getTodayHealth } = fitness;
+  const finance = useFinanceStore();
+  const { transactions } = finance;
+  const [hideFinanceAmounts, setHideFinanceAmounts] = useState(() => localStorage.getItem('life-tracker-finance-hide-amounts') === 'true');
+  const { todos } = useTodoStore();
   const today = getTodayStr();
   const todayHealth = getTodayHealth();
+  const todayTodoStats = getTodoDayStats(todos, today);
+  const openTodosToday = todos.filter((todo) => todo.date === today && !todo.completedAt).length;
+
+  useEffect(() => {
+    if (!fitness.isLoaded && !fitness.isLoading) void fitness.loadFitnessData();
+  }, [fitness.isLoaded, fitness.isLoading, fitness.loadFitnessData]);
+
+  const currentFitnessPlan = fitness.getCurrentPlan();
+  const plannedFitnessDays = currentFitnessPlan?.days.filter((day) => !day.isSkipped) ?? [];
+  const completedFitnessDays = plannedFitnessDays.filter((day) => fitness.workoutLogs.some(
+    (log) => log.planDayId === day.id || (!log.planDayId && log.date === day.scheduledDate),
+  )).length;
+  const workoutsPlannedThisWeek = plannedFitnessDays.length || fitness.profile?.trainingDaysPerWeek || 0;
 
   // Calculate stats
   const habitsCompletedToday = habits.filter((h) =>
@@ -66,10 +91,16 @@ export default function Dashboard() {
   );
   const monthlyIncome = monthlyTransactions
     .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => roundMoney(sum + t.amount), 0);
   const monthlyExpenses = monthlyTransactions
     .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => roundMoney(sum + t.amount), 0);
+  const remainingForLoan = (loanId: string, amount: number) => Math.max(0, roundMoney(amount - sumMoney(finance.loanPayments.filter((payment) => payment.loanId === loanId).map((payment) => payment.amount))));
+  const toReceive = sumMoney(finance.loans.filter((loan) => loan.direction === 'lent').map((loan) => remainingForLoan(loan.id, loan.amount)));
+  const toPay = sumMoney(finance.loans.filter((loan) => loan.direction === 'borrowed').map((loan) => remainingForLoan(loan.id, loan.amount)));
+  const savingsGoal = finance.savingsGoals[0];
+  const savingsProgress = savingsGoal ? sumMoney(finance.savingsContributions.filter((item) => item.goalId === savingsGoal.id).map((item) => item.amount)) : 0;
+  const showFinanceAmount = (amount: number) => hideFinanceAmounts ? '••••••' : formatCurrency(amount, finance.financeSettings.currency);
 
   // Build mood chart data for last 7 days
   const moodChartData = Array.from({ length: 7 }, (_, i) => {
@@ -203,6 +234,30 @@ export default function Dashboard() {
         ))}
       </div>
 
+      <Link to="/todos" className="block rounded-card-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg">
+        <Card hover className="flex items-center justify-between gap-4 border-l-4 border-l-accent p-4 sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="rounded-xl bg-accent/10 p-2.5 text-accent"><ListTodo size={21} /></div>
+            <div className="min-w-0"><p className="text-sm font-semibold text-app-subtle">Today’s To-Dos</p><p className="mt-1 text-xl font-bold text-app-ink">{openTodosToday} open <span className="text-sm font-medium text-app-subtle">· {todayTodoStats.percent}% complete</span></p></div>
+          </div>
+          <span className="shrink-0 text-sm font-semibold text-app-ink">View tasks <span aria-hidden="true">→</span></span>
+        </Card>
+      </Link>
+
+      <Link to="/fitness" aria-label="Open Fitness" className="block rounded-card-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg">
+        <Card hover className="flex items-center justify-between gap-4 border-l-4 border-l-cat-indigo p-4 sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="rounded-xl bg-cat-indigo/10 p-2.5 text-cat-indigo"><Dumbbell size={21} /></div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-app-subtle">Fitness</p>
+              <p className="mt-1 truncate text-lg font-bold text-app-ink">{!fitness.profile ? 'Set up your plan' : plannedFitnessDays.find((day) => day.scheduledDate === today)?.name ?? 'Rest day'}</p>
+              <p className="text-xs text-app-subtle">{completedFitnessDays} of {workoutsPlannedThisWeek} workouts this week</p>
+            </div>
+          </div>
+          <span className="shrink-0 text-sm font-semibold text-app-ink">{!fitness.profile ? 'Set up' : 'Open Fitness'} <span aria-hidden="true">→</span></span>
+        </Card>
+      </Link>
+
       {/* Charts Row */}
       <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
         {/* Mood Trend Chart */}
@@ -250,9 +305,7 @@ export default function Dashboard() {
 
         {/* Finance Summary */}
         <Card>
-          <h3 className="mb-4 text-sm font-semibold text-app-ink">
-            This Month's Finances
-          </h3>
+          <div className="mb-4 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold text-app-ink">This Month's Finances</h3><button type="button" aria-label={hideFinanceAmounts ? 'Show finance amounts' : 'Hide finance amounts'} onClick={() => { const next = !hideFinanceAmounts; setHideFinanceAmounts(next); localStorage.setItem('life-tracker-finance-hide-amounts', String(next)); }} className="rounded-lg p-2 text-app-subtle hover:bg-app-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">{hideFinanceAmounts ? <Eye size={17}/> : <EyeOff size={17}/>}</button></div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -260,7 +313,7 @@ export default function Dashboard() {
                 <span className="text-sm text-app-subtle">Income</span>
               </div>
               <span className="font-semibold text-cat-green">
-                {formatCurrency(monthlyIncome)}
+                {showFinanceAmount(monthlyIncome)}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -269,7 +322,7 @@ export default function Dashboard() {
                 <span className="text-sm text-app-subtle">Expenses</span>
               </div>
               <span className="font-semibold text-app-ink">
-                {formatCurrency(monthlyExpenses)}
+                {showFinanceAmount(monthlyExpenses)}
               </span>
             </div>
             <div className="border-t border-app-border pt-3">
@@ -282,10 +335,13 @@ export default function Dashboard() {
                     : 'text-app-ink'
                   }`}
                 >
-                  {formatCurrency(monthlyIncome - monthlyExpenses)}
+                  {showFinanceAmount(monthlyIncome - monthlyExpenses)}
                 </span>
               </div>
             </div>
+            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-app-border pt-3"><div><p className="text-xs text-app-subtle">Loans to receive</p><p className="mt-1 text-sm font-bold text-cat-green-ink">{showFinanceAmount(toReceive)}</p></div><div><p className="text-xs text-app-subtle">Loans to pay</p><p className="mt-1 text-sm font-bold text-cat-indigo">{showFinanceAmount(toPay)}</p></div></div>
+            {savingsGoal && <Link to="/finances" className="mt-3 block rounded-xl bg-cat-indigo/10 px-3 py-2 text-xs text-app-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"><span className="font-semibold">Saving for {savingsGoal.name}</span><span className="ml-2 text-app-subtle">{showFinanceAmount(savingsProgress)} of {showFinanceAmount(savingsGoal.targetAmount)}</span></Link>}
+            <Link to="/finances" className="mt-3 inline-flex text-xs font-semibold text-app-ink underline decoration-accent underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Open Finances</Link>
           </div>
         </Card>
       </div>

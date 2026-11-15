@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { MobileTabBar } from './MobileTabBar';
 import { useThemeStore, applyTheme } from '../../stores/themeStore';
+import { TodoReminderMonitor } from './TodoReminderMonitor';
 
 /**
  * Layout — The main wrapper that combines Sidebar + Navbar + Content.
@@ -40,6 +41,7 @@ export function Layout() {
 
       {/* Mobile bottom tab bar */}
       <MobileTabBar />
+      <TodoReminderMonitor />
     </div>
   );
 }

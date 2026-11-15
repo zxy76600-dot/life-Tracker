@@ -38,6 +38,15 @@ export function getTodayStr(): string {
   return format(startOfDay(new Date()), 'yyyy-MM-dd');
 }
 
+/** Keep stored and calculated currency values on exact cent boundaries. */
+export function roundMoney(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
+export function sumMoney(values: number[]): number {
+  return values.reduce((cents, amount) => cents + Math.round((amount + Number.EPSILON) * 100), 0) / 100;
+}
+
 /**
  * Calculate the current streak for a habit.
  * A streak counts how many consecutive days (up to today) the habit was completed.
@@ -72,10 +81,10 @@ export function calculateStreak(completedDates: string[]): number {
 /**
  * Format currency with dollar sign.
  */
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number, currency = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);

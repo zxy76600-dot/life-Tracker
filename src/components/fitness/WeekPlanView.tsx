@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
 import { Card, Button, Badge, Modal } from '../ui';
 import { useFitnessStore, getLocalMonday } from '../../stores/fitnessStore';
 import { getExerciseById } from '../../data/exercises';
 import type { FitnessPlanDay } from '../../types';
 import { getTodayStr } from '../../utils/helpers';
+import { WeeklyCheckinModal } from './WeeklyCheckinModal';
 import {
   Calendar,
   Play,
   RotateCcw,
   ArrowRightLeft,
+  Sparkles,
 } from 'lucide-react';
 
 interface WeekPlanViewProps {
@@ -21,6 +23,8 @@ export function WeekPlanView({ onStartWorkout }: WeekPlanViewProps) {
     customExercises,
     getCurrentPlan,
     skipOrMovePlanDay,
+    workoutLogs,
+    weeklyCheckins,
   } = useFitnessStore();
 
   const currentPlan = getCurrentPlan();
@@ -30,6 +34,25 @@ export function WeekPlanView({ onStartWorkout }: WeekPlanViewProps) {
 
   const [movingDay, setMovingDay] = useState<FitnessPlanDay | null>(null);
   const [targetDayIndex, setTargetDayIndex] = useState<number>(0);
+  const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
+
+  // Check if week is ending or over (Friday..Sunday) or all planned workouts done
+  const dayOfWeekIndex = (new Date().getDay() + 6) % 7;
+  const isWeekEndingOrOver = dayOfWeekIndex >= 4;
+
+  const sundayStr = format(addDays(mondayDate, 6), 'yyyy-MM-dd');
+  const weekLogs = useMemo(() => {
+    return workoutLogs.filter((l) => l.date >= mondayStr && l.date <= sundayStr);
+  }, [workoutLogs, mondayStr, sundayStr]);
+
+  const allPlannedDone = currentPlan
+    ? currentPlan.days.every(
+        (d) => d.isSkipped || weekLogs.some((l) => l.planDayId === d.id || l.date === d.scheduledDate),
+      )
+    : false;
+
+  const showCheckinBanner = isWeekEndingOrOver || allPlannedDone;
+  const hasCheckedInThisWeek = weeklyCheckins.some((c) => c.weekStartDate === mondayStr);
 
   // Generate 7 days for this Monday-to-Sunday week
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -99,6 +122,30 @@ export function WeekPlanView({ onStartWorkout }: WeekPlanViewProps) {
 
   return (
     <div className="space-y-4">
+      {/* End-of-week Check-in Banner */}
+      {showCheckinBanner && (
+        <Card className="p-4 border-l-4 border-l-accent bg-accent/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-accent text-white shadow-accent">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-app-ink">
+                {hasCheckedInThisWeek ? 'Weekly Check-In Completed' : 'Weekly Check-In Ready'}
+              </h4>
+              <p className="text-xs text-app-subtle">
+                {hasCheckedInThisWeek
+                  ? 'Your check-in reflections were saved and next week’s plan is ready.'
+                  : 'Review your energy, sleep, and workouts to generate next week’s progressive overload plan.'}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" onClick={() => setIsCheckinModalOpen(true)} className="shrink-0 text-xs">
+            {hasCheckedInThisWeek ? 'Edit Check-In' : 'Complete Check-In →'}
+          </Button>
+        </Card>
+      )}
+
       {/* Week Header info */}
       <Card className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
@@ -110,7 +157,18 @@ export function WeekPlanView({ onStartWorkout }: WeekPlanViewProps) {
             Week of {format(mondayDate, 'MMMM d, yyyy')} · {currentPlan.days.length} planned sessions
           </p>
         </div>
-        <Badge variant="blue">{currentPlan.goalMode.toUpperCase()} PLAN</Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setIsCheckinModalOpen(true)}
+            className="text-xs"
+          >
+            <Sparkles size={14} />
+            {hasCheckedInThisWeek ? 'Check-In Done' : 'Weekly Check-In'}
+          </Button>
+          <Badge variant="blue">{currentPlan.goalMode.toUpperCase()} PLAN</Badge>
+        </div>
       </Card>
 
       {/* 7 Days List (Mobile-friendly vertical cards with today highlighted) */}
@@ -292,6 +350,14 @@ export function WeekPlanView({ onStartWorkout }: WeekPlanViewProps) {
             </div>
           </div>
         </Modal>
+      )}
+      {/* Weekly Check-In Modal */}
+      {isCheckinModalOpen && (
+        <WeeklyCheckinModal
+          isOpen={isCheckinModalOpen}
+          onClose={() => setIsCheckinModalOpen(false)}
+          weekStartDate={mondayStr}
+        />
       )}
     </div>
   );

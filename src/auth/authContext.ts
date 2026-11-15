@@ -9,6 +9,7 @@ export interface AuthContextValue {
   signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   clearError: () => void;
 }
 

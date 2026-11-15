@@ -8,6 +8,7 @@ import {
   Dumbbell,
   Wallet,
 } from 'lucide-react';
+import { useThemeStore } from '../../stores/themeStore';
 
 /**
  * MobileTabBar — Bottom navigation for mobile devices with true black theme.
@@ -23,10 +24,11 @@ const tabs = [
 ];
 
 export function MobileTabBar() {
+  const hiddenPages = useThemeStore((state) => state.hiddenPages);
   return (
     <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 z-30 border-t border-app-border bg-app-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-20px_rgba(20,24,38,0.35)] backdrop-blur-xl transition-colors duration-200 motion-reduce:transition-none lg:hidden">
       <div className="flex items-center justify-between gap-0.5 px-1.5 py-2 sm:px-3">
-        {tabs.map((tab) => (
+        {tabs.filter((tab) => tab.to === '/' || !hiddenPages.includes(tab.to)).map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}

@@ -36,7 +36,7 @@ function App() {
             <Route path="/mood" element={<MoodJournal />} />
             <Route path="/fitness" element={<Fitness />} />
             <Route path="/finances" element={<Finances />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/:section?" element={<Settings />} />
           </Route>
         </Route>
       </Routes>

@@ -35,7 +35,7 @@ const navItems = [
 ];
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { theme, toggleTheme } = useThemeStore();
+  const { theme, toggleTheme, hiddenPages } = useThemeStore();
 
   return (
     <>
@@ -78,7 +78,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Navigation Links */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => (
+          {navItems.filter((item) => item.to === '/' || item.to === '/settings' || !hiddenPages.includes(item.to)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -106,7 +106,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             className="flex min-h-11 w-full items-center justify-between rounded-xl border border-app-border bg-app-muted px-3 py-2 text-xs font-medium text-app-ink transition-colors motion-reduce:transition-none hover:border-accent/30 hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:hover:bg-accent/10 cursor-pointer"
           >
             <span className="flex items-center gap-2">
-              {theme === 'dark' ? (
+              {theme !== 'light' ? (
                 <>
                   <Moon size={15} className="text-neutral-400" />
                   <span>Dark Mode (Black)</span>

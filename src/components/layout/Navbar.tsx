@@ -1,5 +1,5 @@
 import { Menu, Bell, Sun, Moon, LogOut } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../stores/themeStore';
 import { useAuth } from '../../auth/authContext';
 import { CloudNotice } from '../ui/CloudNotice';
@@ -24,9 +24,12 @@ const pageTitles: Record<string, string> = {
 
 export function Navbar({ onMenuClick }: NavbarProps) {
   const location = useLocation();
-  const title = pageTitles[location.pathname] ?? 'Life Tracker';
+  const title = location.pathname.startsWith('/settings') ? 'Settings' : pageTitles[location.pathname] ?? 'Life Tracker';
   const { theme, toggleTheme } = useThemeStore();
   const { user, signOut } = useAuth();
+  const displayName = typeof user?.user_metadata?.display_name === 'string' ? user.user_metadata.display_name.trim() : '';
+  const avatarColors: Record<string, string> = { coral: '#ff5a5f', indigo: '#5b5bf0', blue: '#3b82f6', teal: '#14b8a6', amber: '#f59e0b', green: '#22a06b' };
+  const avatarColor = typeof user?.user_metadata?.avatar_color === 'string' ? avatarColors[user.user_metadata.avatar_color] : undefined;
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-app-border bg-app-bg/90 px-3 backdrop-blur-xl transition-colors duration-200 motion-reduce:transition-none sm:gap-4 sm:px-5 lg:px-8">
@@ -44,15 +47,15 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
       {/* Right side actions */}
       <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <span className="hidden max-w-48 truncate text-xs text-app-subtle md:block">{user?.email}</span>
+        <span className="hidden max-w-48 truncate text-xs text-app-subtle md:block">{displayName || user?.email}</span>
         {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
           className="flex min-h-10 items-center gap-2 rounded-xl border border-app-border bg-app-card px-2.5 py-1.5 text-xs font-semibold text-app-ink transition-colors motion-reduce:transition-none hover:border-accent/30 hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:hover:bg-accent/10 sm:px-3 cursor-pointer"
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          title="Toggle light and dark appearance"
+          aria-label="Toggle light and dark appearance"
         >
-          {theme === 'dark' ? (
+          {theme !== 'light' ? (
             <>
               <Sun size={15} className="text-amber-400" />
               <span className="hidden sm:inline">Light</span>
@@ -74,9 +77,9 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent ring-2 ring-app-bg" />
         </button>
 
-        <div title={user?.email ?? 'Account'} className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-sm font-bold uppercase text-app-ink ring-1 ring-inset ring-accent/20">
-          {user?.email?.[0] ?? 'U'}
-        </div>
+        <Link to="/settings/account" title={displayName || user?.email || 'Account settings'} aria-label="Open account settings" className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-sm font-bold uppercase text-app-ink ring-1 ring-inset ring-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" style={avatarColor ? { backgroundColor: avatarColor, color: '#fff' } : undefined}>
+          {(displayName || user?.email)?.[0] ?? 'U'}
+        </Link>
         <button onClick={() => void signOut().catch(reportCloudError)} className="rounded-xl p-2 text-app-subtle transition-colors motion-reduce:transition-none hover:bg-app-muted hover:text-app-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" aria-label="Sign out" title="Sign out"><LogOut size={19} /></button>
       </div>
       <CloudNotice />

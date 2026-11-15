@@ -119,6 +119,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error: authError } = await requireSupabase().auth.signOut();
       if (authError) { setError(authError.message); throw authError; }
     },
+    refreshUser: async () => {
+      const { data, error: userError } = await requireSupabase().auth.getUser();
+      if (userError) { setError(userError.message); throw userError; }
+      setUser(data.user);
+    },
     clearError: () => setError(''),
   }), [user, loading, error]);
 

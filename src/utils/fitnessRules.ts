@@ -18,6 +18,24 @@ export interface WeightTrendResult {
   isRapidLoss: boolean;
 }
 
+/** Count consecutive Monday-to-Sunday weeks with at least one completed workout. */
+export function countConsecutiveTrainingWeeks(
+  logs: readonly Pick<FitnessWorkoutLog, 'date'>[],
+  weekStartDate: string,
+): number {
+  const monday = parseISO(weekStartDate);
+  let count = 0;
+
+  for (let offset = 0; ; offset += 1) {
+    const start = format(addDays(monday, -7 * offset), 'yyyy-MM-dd');
+    const end = format(addDays(parseISO(start), 6), 'yyyy-MM-dd');
+    if (!logs.some((log) => log.date >= start && log.date <= end)) break;
+    count += 1;
+  }
+
+  return count;
+}
+
 /**
  * Compute weekly weight trend and healthy progression bands.
  * General guidance only; no calorie or diet targets.
@@ -78,6 +96,7 @@ interface ProgressionEvaluationParams {
   plannedExercise: FitnessPlanDayExercise;
   currentWeekLogs: readonly FitnessWorkoutLog[];
   previousWeekLogs: readonly FitnessWorkoutLog[];
+  expectedWorkingSetCount: number;
   isDeload: boolean;
   units: 'kg' | 'lb';
 }
@@ -91,6 +110,7 @@ function evaluateExerciseProgression({
   plannedExercise,
   currentWeekLogs,
   previousWeekLogs,
+  expectedWorkingSetCount,
   isDeload,
   units,
 }: ProgressionEvaluationParams): {
@@ -137,6 +157,15 @@ function evaluateExerciseProgression({
         action: 'hold',
         reason,
       },
+      reason,
+    };
+  }
+
+  if (currentWeekSets.length < expectedWorkingSetCount) {
+    const reason = `${exName}: kept current targets because only ${currentWeekSets.length} of ${expectedWorkingSetCount} planned working sets were logged`;
+    return {
+      adjustedExercise: { ...plannedExercise },
+      adjustment: { exerciseId, exerciseName: exName, action: 'hold', reason },
       reason,
     };
   }
@@ -307,6 +336,10 @@ export function generateNextWeekPlan({
         plannedExercise: plannedEx,
         currentWeekLogs,
         previousWeekLogs,
+        expectedWorkingSetCount: Math.max(1, currentPlan.days
+          .filter((plannedDay) => !plannedDay.isSkipped && plannedDay.scheduledDate >= currentPlan.weekStartDate && plannedDay.scheduledDate < nextMondayStr)
+          .flatMap((plannedDay) => plannedDay.exercises.filter((item) => item.exerciseId === plannedEx.exerciseId))
+          .reduce((total, item) => total + item.targetSets, 0)),
         isDeload,
         units: profile.units,
       });

@@ -23,6 +23,7 @@ import { ExerciseLibrary } from '../components/fitness/ExerciseLibrary';
 import { RoutineManager } from '../components/fitness/RoutineManager';
 import { WeekPlanView } from '../components/fitness/WeekPlanView';
 import { WorkoutLogger } from '../components/fitness/WorkoutLogger';
+import { FitnessProgress } from '../components/fitness/FitnessProgress';
 import { generateFitnessPlan } from '../utils/fitnessPlans';
 
 type FitnessTab = 'today' | 'plan' | 'library' | 'progress';
@@ -81,6 +82,7 @@ export default function Fitness() {
     loadFitnessData,
     setPlan,
     getCurrentPlan,
+    fitnessSchemaAvailable,
   } = useFitnessStore();
 
   const [activeTab, setActiveTab] = useState<FitnessTab>('today');
@@ -202,6 +204,12 @@ export default function Fitness() {
           </Button>
         </div>
       </div>
+
+      {isLoaded && !fitnessSchemaAvailable && (
+        <div role="status"><Card className="border-cat-amber/30 bg-cat-amber/10 p-4 text-sm text-app-ink">
+          Fitness plan and check-in tables are unavailable. Existing daily health tracking and general workout logging remain available, but rep-based plans and check-ins may not sync until the fitness tables are available.
+        </Card></div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="border-b border-app-border">
@@ -504,37 +512,7 @@ export default function Fitness() {
 
       {/* Tab 4: Progress & History */}
       {activeTab === 'progress' && (
-        <div className="space-y-6">
-          <Card className="p-5 text-center space-y-2">
-            <TrendingUp size={32} className="mx-auto text-accent" />
-            <h3 className="font-bold text-base text-app-ink">Fitness History & Progress</h3>
-            <p className="text-xs text-app-subtle max-w-md mx-auto">
-              Workout logs, volume trends, and weekly check-ins will appear here. Full analytics arriving in Stage 4.
-            </p>
-          </Card>
-
-          {/* Full history of workouts */}
-          <div className="space-y-3">
-            <h4 className="font-bold text-sm text-app-ink">All Logged Workouts ({sortedWorkouts.length})</h4>
-            {sortedWorkouts.length === 0 ? (
-              <p className="text-xs text-app-subtle italic">No workout history recorded yet.</p>
-            ) : (
-              sortedWorkouts.map((workout) => (
-                <Card key={workout.id} className="p-3.5 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-sm text-app-ink">{workout.name}</p>
-                    <p className="text-xs text-app-subtle mt-0.5">
-                      {workout.duration} min · {formatDate(workout.date)} · {workout.type}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeWorkout(workout.id)}>
-                    <Trash2 size={15} />
-                  </Button>
-                </Card>
-              ))
-            )}
-          </div>
-        </div>
+        <FitnessProgress />
       )}
 
       {/* Medical Disclaimer Note at Footer */}

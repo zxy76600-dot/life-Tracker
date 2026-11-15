@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, Button } from '../components/ui';
 import { Link } from 'react-router-dom';
 import { useHabitStore } from '../stores/habitStore';
@@ -22,6 +22,7 @@ import {
   Sparkles,
   Eye,
   EyeOff,
+  Dumbbell,
 } from 'lucide-react';
 import { MOOD_EMOJIS, type MoodLevel } from '../types';
 import {
@@ -44,7 +45,8 @@ export default function Dashboard() {
   const { habits } = useHabitStore();
   const { goals } = useGoalStore();
   const { entries: moodEntries } = useMoodStore();
-  const { getTodayHealth } = useFitnessStore();
+  const fitness = useFitnessStore();
+  const { getTodayHealth } = fitness;
   const finance = useFinanceStore();
   const { transactions } = finance;
   const [hideFinanceAmounts, setHideFinanceAmounts] = useState(() => localStorage.getItem('life-tracker-finance-hide-amounts') === 'true');
@@ -53,6 +55,17 @@ export default function Dashboard() {
   const todayHealth = getTodayHealth();
   const todayTodoStats = getTodoDayStats(todos, today);
   const openTodosToday = todos.filter((todo) => todo.date === today && !todo.completedAt).length;
+
+  useEffect(() => {
+    if (!fitness.isLoaded && !fitness.isLoading) void fitness.loadFitnessData();
+  }, [fitness.isLoaded, fitness.isLoading, fitness.loadFitnessData]);
+
+  const currentFitnessPlan = fitness.getCurrentPlan();
+  const plannedFitnessDays = currentFitnessPlan?.days.filter((day) => !day.isSkipped) ?? [];
+  const completedFitnessDays = plannedFitnessDays.filter((day) => fitness.workoutLogs.some(
+    (log) => log.planDayId === day.id || (!log.planDayId && log.date === day.scheduledDate),
+  )).length;
+  const workoutsPlannedThisWeek = plannedFitnessDays.length || fitness.profile?.trainingDaysPerWeek || 0;
 
   // Calculate stats
   const habitsCompletedToday = habits.filter((h) =>
@@ -228,6 +241,20 @@ export default function Dashboard() {
             <div className="min-w-0"><p className="text-sm font-semibold text-app-subtle">Today’s To-Dos</p><p className="mt-1 text-xl font-bold text-app-ink">{openTodosToday} open <span className="text-sm font-medium text-app-subtle">· {todayTodoStats.percent}% complete</span></p></div>
           </div>
           <span className="shrink-0 text-sm font-semibold text-app-ink">View tasks <span aria-hidden="true">→</span></span>
+        </Card>
+      </Link>
+
+      <Link to="/fitness" aria-label="Open Fitness" className="block rounded-card-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg">
+        <Card hover className="flex items-center justify-between gap-4 border-l-4 border-l-cat-indigo p-4 sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="rounded-xl bg-cat-indigo/10 p-2.5 text-cat-indigo"><Dumbbell size={21} /></div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-app-subtle">Fitness</p>
+              <p className="mt-1 truncate text-lg font-bold text-app-ink">{!fitness.profile ? 'Set up your plan' : plannedFitnessDays.find((day) => day.scheduledDate === today)?.name ?? 'Rest day'}</p>
+              <p className="text-xs text-app-subtle">{completedFitnessDays} of {workoutsPlannedThisWeek} workouts this week</p>
+            </div>
+          </div>
+          <span className="shrink-0 text-sm font-semibold text-app-ink">{!fitness.profile ? 'Set up' : 'Open Fitness'} <span aria-hidden="true">→</span></span>
         </Card>
       </Link>
 

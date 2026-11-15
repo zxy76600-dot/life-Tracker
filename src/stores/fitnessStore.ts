@@ -275,20 +275,19 @@ export const useFitnessStore = create<FitnessState>()((set, get) => ({
   },
 
   addWeeklyCheckin: async (checkinData) => {
+    const previous = get().weeklyCheckins;
+    const existing = previous.find((checkin) => checkin.weekStartDate === checkinData.weekStartDate);
     const newCheckin: FitnessWeeklyCheckin = {
       ...checkinData,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
+      id: existing?.id ?? generateId(),
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
     };
-    set((state) => {
-      const filtered = state.weeklyCheckins.filter((c) => c.weekStartDate !== newCheckin.weekStartDate);
-      return { weeklyCheckins: [newCheckin, ...filtered] };
-    });
+    set({ weeklyCheckins: [newCheckin, ...previous.filter((c) => c.weekStartDate !== newCheckin.weekStartDate)] });
     try {
       await saveFitnessWeeklyCheckin(newCheckin);
       return newCheckin;
     } catch (err) {
-      set((state) => ({ weeklyCheckins: state.weeklyCheckins.filter((c) => c.id !== newCheckin.id) }));
+      set({ weeklyCheckins: previous });
       reportCloudError(err);
       throw err;
     }

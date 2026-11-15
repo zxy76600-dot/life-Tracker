@@ -3,6 +3,7 @@ import { Card, Button, Modal } from '../ui';
 import { useFitnessStore, getLocalMonday } from '../../stores/fitnessStore';
 import {
   calculateWeightTrend,
+  countConsecutiveTrainingWeeks,
   generateNextWeekPlan,
   type WeightTrendResult,
 } from '../../utils/fitnessRules';
@@ -31,6 +32,7 @@ export function WeeklyCheckinModal({
 }: WeeklyCheckinModalProps) {
   const {
     profile,
+    workouts,
     getCurrentPlan,
     workoutLogs,
     weeklyCheckins,
@@ -71,11 +73,15 @@ export function WeeklyCheckinModal({
     return weeklyCheckins.find((c) => c.weekStartDate === previousMondayStr);
   }, [weeklyCheckins, previousMondayStr]);
 
-  const defaultWorkoutsPlanned = currentPlan?.days.length || 3;
+  const plannedDays = currentPlan?.days.filter((day) => !day.isSkipped) ?? [];
+  const defaultWorkoutsPlanned = plannedDays.length || 3;
+  const loggedPlannedWorkoutCount = currentPlan
+    ? plannedDays.filter((day) => currentWeekLogs.some((log) => log.planDayId === day.id || (!log.planDayId && log.date === day.scheduledDate))).length
+    : currentWeekLogs.length;
 
   // Form states
   const [workoutsCompleted, setWorkoutsCompleted] = useState<number>(
-    existingCheckin ? existingCheckin.workoutsCompleted : currentWeekLogs.length,
+    existingCheckin ? existingCheckin.workoutsCompleted : loggedPlannedWorkoutCount,
   );
   const workoutsPlanned = existingCheckin ? existingCheckin.workoutsPlanned : defaultWorkoutsPlanned;
   const [energy, setEnergy] = useState<number>(existingCheckin ? existingCheckin.energy : 4);
@@ -83,7 +89,7 @@ export function WeeklyCheckinModal({
   const [hunger, setHunger] = useState<number>(existingCheckin ? existingCheckin.hunger : 3);
   const [soreness, setSoreness] = useState<number>(existingCheckin ? existingCheckin.soreness : 2);
   const [weightInput, setWeightInput] = useState<string>(
-    existingCheckin?.weight ? String(existingCheckin.weight) : '',
+    existingCheckin?.weight != null ? String(existingCheckin.weight) : '',
   );
 
   const [saving, setSaving] = useState(false);
@@ -114,7 +120,7 @@ export function WeeklyCheckinModal({
       setWeightTrendInfo(trend);
 
       // Generate next week's plan with deterministic rules
-      const consecutiveWeeksTrained = weeklyCheckins.length;
+      const consecutiveWeeksTrained = countConsecutiveTrainingWeeks(workoutLogs, effectiveWeekMonday);
       const { nextPlan, adjustments, reasons, isDeload } = generateNextWeekPlan({
         profile: profile || {
           goalMode: 'basic',
@@ -155,7 +161,7 @@ export function WeeklyCheckinModal({
       const followingMondayStr = format(addDays(parseISO(nextMondayStr), 7), 'yyyy-MM-dd');
       const hasNextWeekLogs = workoutLogs.some(
         (log) => log.date >= nextMondayStr && log.date < followingMondayStr,
-      );
+      ) || workouts.some((workout) => workout.date >= nextMondayStr && workout.date < followingMondayStr);
 
       // Only apply next week's plan if current check-in is for the active week and next week hasn't been started
       const currentMondayStr = getLocalMonday();
@@ -207,7 +213,7 @@ export function WeeklyCheckinModal({
             <div>
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="font-semibold text-app-ink flex items-center gap-1.5">
-                  <Zap size={14} className="text-cat-amber" /> Energy Level
+                  <Zap size={14} className="text-cat-amber" /> Average Energy This Week
                 </span>
                 <span className="font-bold text-app-subtle">{energy} / 5</span>
               </div>
@@ -233,7 +239,7 @@ export function WeeklyCheckinModal({
             <div>
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="font-semibold text-app-ink flex items-center gap-1.5">
-                  <Moon size={14} className="text-cat-indigo" /> Sleep Quality & Rest
+                  <Moon size={14} className="text-cat-indigo" /> Average Sleep This Week
                 </span>
                 <span className="font-bold text-app-subtle">{sleep} / 5</span>
               </div>
